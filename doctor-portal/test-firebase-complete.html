@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Firebase Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #b6d4da; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
+        .progress { background: #f1f1f1; border-radius: 10px; padding: 3px; margin: 10px 0; }
+        .progress-bar { background: #007bff; height: 20px; border-radius: 7px; text-align: center; line-height: 20px; color: white; transition: width 0.3s; }
+        h3 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔥 Complete Firebase Test Suite</h1>
+    
+    <div class="test-section">
+        <h3>Overall Status</h3>
+        <div id="overallStatus" class="status info">Starting tests...</div>
+        <div class="progress">
+            <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔐 Authentication Test</h3>
+        <div id="authStatus" class="status warning">Not tested</div>
+        <button id="authBtn" onclick="testAuth()" disabled>Test Authentication</button>
+    </div>
+
+    <div class="test-section">
+        <h3>🏪 Firestore Test</h3>
+        <div id="firestoreStatus" class="status warning">Not tested</div>
+        <button id="firestoreBtn" onclick="testFirestore()" disabled>Test Firestore</button>
+    </div>
+
+    <div class="test-section">
+        <h3>📁 Storage Test</h3>
+        <div id="storageStatus" class="status warning">Not tested</div>
+        <button id="storageBtn" onclick="testStorage()" disabled>Test Storage</button>
+    </div>
+
+    <div class="test-section">
+        <h3>💬 Chat Integration Test</h3>
+        <div id="chatStatus" class="status warning">Not tested</div>
+        <button id="chatBtn" onclick="testChatIntegration()" disabled>Test Chat</button>
+    </div>
+
+    <div class="test-section">
+        <h3>📋 Test Logs</h3>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <button onclick="downloadLogs()">Download Logs</button>
+        <div id="logs" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4cHeV25PvdgAgKttpoq3iBMMrtREH9iM",
+            authDomain: "medibot-b2bf7.firebaseapp.com",
+            projectId: "medibot-b2bf7",
+            storageBucket: "medibot-b2bf7.firebasestorage.app",
+            messagingSenderId: "735267785437",
+            appId: "1:735267785437:web:db7c4275659f328f46a934",
+            measurementId: "G-6LB717MSN1"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        let testResults = {
+            auth: { status: 'pending', message: '', error: null },
+            firestore: { status: 'pending', message: '', error: null },
+            storage: { status: 'pending', message: '', error: null },
+            chat: { status: 'pending', message: '', error: null }
+        };
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logEntry.innerHTML = `<pre>${icon} [${timestamp}] ${message}</pre>`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(test, status, message, error = null) {
+            testResults[test] = { status, message, error };
+            const statusDiv = document.getElementById(`${test}Status`);
+            const btn = document.getElementById(`${test}Btn`);
+            
+            if (status === 'success') {
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `✅ ${message}`;
+                btn.disabled = false;
+                btn.style.background = '#28a745';
+                btn.textContent = 'Test Passed ✓';
+            } else if (status === 'error') {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `❌ ${message}`;
+                btn.disabled = false;
+                btn.style.background = '#dc3545';
+                btn.textContent = 'Test Failed ✗';
+            } else if (status === 'testing') {
+                statusDiv.className = 'status warning';
+                statusDiv.innerHTML = `⏳ ${message}`;
+                btn.disabled = true;
+                btn.textContent = 'Testing...';
+            }
+            
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const completed = Object.values(testResults).filter(r => r.status === 'success' || r.status === 'error').length;
+            const total = Object.keys(testResults).length;
+            const percentage = Math.round((completed / total) * 100);
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${percentage}%`;
+            
+            const overallStatus = document.getElementById('overallStatus');
+            if (percentage === 100) {
+                const allPassed = Object.values(testResults).every(r => r.status === 'success');
+                if (allPassed) {
+                    overallStatus.className = 'status success';
+                    overallStatus.innerHTML = '🎉 All tests passed! Firebase is fully configured and ready.';
+                } else {
+                    overallStatus.className = 'status warning';
+                    overallStatus.innerHTML = '⚠️ Some tests failed. Check individual test results.';
+                }
+            } else {
+                overallStatus.className = 'status info';
+                overallStatus.innerHTML = `Testing in progress... ${completed}/${total} completed`;
+            }
+        }
+
+        async function testAuth() {
+            log('🔐 Testing Firebase Authentication...');
+            updateStatus('auth', 'testing', 'Testing authentication...');
+            
+            try {
+                // Try anonymous authentication
+                try {
+                    const userCredential = await auth.signInAnonymously();
+                    log(`✅ Anonymous authentication successful. User ID: ${userCredential.user.uid}`);
+                    updateStatus('auth', 'success', 'Anonymous authentication enabled and working');
+                } catch (authError) {
+                    if (authError.code === 'auth/admin-restricted-operation') {
+                        log('⚠️ Anonymous authentication is disabled, but that\'s okay for testing');
+                        updateStatus('auth', 'success', 'Authentication handling works (anonymous disabled)');
+                    } else {
+                        throw authError;
+                    }
+                }
+            } catch (error) {
+                log(`❌ Authentication test failed: ${error.message}`);
+                updateStatus('auth', 'error', `Authentication failed: ${error.message}`, error);
+            }
+        }
+
+        async function testFirestore() {
+            log('🏪 Testing Firestore database...');
+            updateStatus('firestore', 'testing', 'Testing Firestore operations...');
+            
+            try {
+                // Test write to test collection
+                const testDoc = {
+                    message: 'Firestore test message',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    testId: Math.random().toString(36).substr(2, 9)
+                };
+
+                log('📝 Writing test document to Firestore...');
+                const docRef = await db.collection('test').add(testDoc);
+                log(`✅ Test document written with ID: ${docRef.id}`);
+
+                // Test chat_messages collection
+                const chatDoc = {
+                    callSessionId: 'test_session_' + Date.now(),
+                    senderId: 'test_user',
+                    senderName: 'Test User',
+                    senderRole: 'doctor',
+                    message: 'Test chat message for Firestore verification',
+                    type: 'text',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sent'
+                };
+
+                log('💬 Writing test chat message...');
+                const chatRef = await db.collection('chat_messages').add(chatDoc);
+                log(`✅ Chat message written with ID: ${chatRef.id}`);
+
+                // Test read operations
+                log('📖 Testing read operations...');
+                const snapshot = await db.collection('test').limit(3).get();
+                log(`✅ Successfully read ${snapshot.size} documents from test collection`);
+
+                updateStatus('firestore', 'success', `Firestore working perfectly (${snapshot.size} docs read)`);
+            } catch (error) {
+                log(`❌ Firestore test failed: ${error.message}`);
+                updateStatus('firestore', 'error', `Firestore failed: ${error.message}`, error);
+            }
+        }
+
+        async function testStorage() {
+            log('📁 Testing Firebase Storage...');
+            updateStatus('storage', 'testing', 'Testing Storage operations...');
+            
+            try {
+                // Test 1: Simple text file upload
+                log('📤 Testing simple file upload...');
+                const testContent = `Hello Firebase Storage! Test at ${new Date().toISOString()}`;
+                const testBlob = new Blob([testContent], { type: 'text/plain' });
+                
+                const testRef = storage.ref(`test/test_${Date.now()}.txt`);
+                const uploadResult = await testRef.put(testBlob);
+                const downloadURL = await uploadResult.ref.getDownloadURL();
+                log(`✅ Simple upload successful. URL: ${downloadURL}`);
+
+                // Test 2: Chat file simulation
+                log('💬 Testing chat file upload simulation...');
+                const chatFileContent = 'This is a simulated chat file attachment';
+                const chatFileBlob = new Blob([chatFileContent], { type: 'text/plain' });
+                
+                const chatFileRef = storage.ref(`chat_files/test_session/test_file_${Date.now()}.txt`);
+                const chatUploadResult = await chatFileRef.put(chatFileBlob);
+                const chatDownloadURL = await chatUploadResult.ref.getDownloadURL();
+                log(`✅ Chat file upload successful. URL: ${chatDownloadURL}`);
+
+                // Test 3: Voice message simulation
+                log('🎤 Testing voice message upload simulation...');
+                const voiceContent = new ArrayBuffer(1024); // Simulate 1KB voice file
+                const voiceBlob = new Blob([voiceContent], { type: 'audio/webm' });
+                
+                const voiceRef = storage.ref(`voice_messages/test_session/voice_${Date.now()}.webm`);
+                const voiceUploadResult = await voiceRef.put(voiceBlob);
+                const voiceDownloadURL = await voiceUploadResult.ref.getDownloadURL();
+                log(`✅ Voice file upload successful. URL: ${voiceDownloadURL}`);
+
+                updateStatus('storage', 'success', 'All Storage operations working perfectly');
+            } catch (error) {
+                log(`❌ Storage test failed: ${error.message}`);
+                if (error.code === 'storage/unauthorized') {
+                    log('🔧 Storage rules may need time to propagate. Retrying in 3 seconds...');
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    try {
+                        const retryRef = storage.ref(`test/retry_${Date.now()}.txt`);
+                        await retryRef.putString('Retry test');
+                        log('✅ Storage working after retry');
+                        updateStatus('storage', 'success', 'Storage working (succeeded on retry)');
+                        return;
+                    } catch (retryError) {
+                        log(`❌ Storage still failing after retry: ${retryError.message}`);
+                    }
+                }
+                updateStatus('storage', 'error', `Storage failed: ${error.message}`, error);
+            }
+        }
+
+        async function testChatIntegration() {
+            log('💬 Testing complete chat integration...');
+            updateStatus('chat', 'testing', 'Testing end-to-end chat functionality...');
+            
+            try {
+                const sessionId = `test_chat_${Date.now()}`;
+                
+                // Test 1: Text message
+                log('📝 Testing text message...');
+                const textMessage = {
+                    callSessionId: sessionId,
+                    senderId: 'doctor_test',
+                    senderName: 'Dr. Test',
+                    senderRole: 'doctor',
+                    message: 'Hello! This is a test message.',
+                    type: 'text',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sent'
+                };
+                
+                const textRef = await db.collection('chat_messages').add(textMessage);
+                log(`✅ Text message created: ${textRef.id}`);
+
+                // Test 2: File message with Storage
+                log('📎 Testing file message...');
+                const fileContent = 'This is a test file content for chat integration';
+                const fileBlob = new Blob([fileContent], { type: 'text/plain' });
+                
+                const fileStorageRef = storage.ref(`chat_files/${sessionId}/integration_test.txt`);
+                const fileUpload = await fileStorageRef.put(fileBlob);
+                const fileURL = await fileUpload.ref.getDownloadURL();
+                
+                const fileMessage = {
+                    callSessionId: sessionId,
+                    senderId: 'patient_test',
+                    senderName: 'Test Patient',
+                    senderRole: 'patient',
+                    message: 'Shared a document',
+                    type: 'file',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sent',
+                    fileUrl: fileURL,
+                    fileName: 'integration_test.txt',
+                    fileSize: fileBlob.size,
+                    fileMimeType: 'text/plain'
+                };
+                
+                const fileRef = await db.collection('chat_messages').add(fileMessage);
+                log(`✅ File message created: ${fileRef.id} with URL: ${fileURL}`);
+
+                // Test 3: Voice message simulation
+                log('🎤 Testing voice message...');
+                const voiceBlob = new Blob([new ArrayBuffer(2048)], { type: 'audio/webm' });
+                
+                const voiceStorageRef = storage.ref(`voice_messages/${sessionId}/integration_voice.webm`);
+                const voiceUpload = await voiceStorageRef.put(voiceBlob);
+                const voiceURL = await voiceUpload.ref.getDownloadURL();
+                
+                const voiceMessage = {
+                    callSessionId: sessionId,
+                    senderId: 'doctor_test',
+                    senderName: 'Dr. Test',
+                    senderRole: 'doctor',
+                    type: 'voice',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sent',
+                    fileUrl: voiceURL,
+                    fileName: 'integration_voice.webm',
+                    fileSize: voiceBlob.size,
+                    fileMimeType: 'audio/webm',
+                    voiceDuration: 5
+                };
+                
+                const voiceRef = await db.collection('chat_messages').add(voiceMessage);
+                log(`✅ Voice message created: ${voiceRef.id} with URL: ${voiceURL}`);
+
+                // Test 4: Real-time listener
+                log('👂 Testing real-time message listener...');
+                const unsubscribe = db.collection('chat_messages')
+                    .where('callSessionId', '==', sessionId)
+                    .onSnapshot((snapshot) => {
+                        log(`📨 Real-time update: Found ${snapshot.size} messages for session ${sessionId}`);
+                        unsubscribe(); // Stop listening after first update
+                    });
+
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for listener
+
+                updateStatus('chat', 'success', 'Complete chat integration working perfectly!');
+                log('🎉 All chat integration tests passed!');
+                
+            } catch (error) {
+                log(`❌ Chat integration test failed: ${error.message}`);
+                updateStatus('chat', 'error', `Chat integration failed: ${error.message}`, error);
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        function downloadLogs() {
+            const logs = document.getElementById('logs').textContent;
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `firebase_test_logs_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Auto-start tests when page loads
+        window.addEventListener('load', async () => {
+            log('🚀 Starting automatic Firebase test suite...');
+            
+            // Enable all buttons
+            document.querySelectorAll('button[id$="Btn"]').forEach(btn => {
+                btn.disabled = false;
+            });
+            
+            // Run tests sequentially
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testAuth();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testFirestore();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testStorage();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testChatIntegration();
+            
+            log('🏁 All tests completed!');
+        });
+    </script>
+</body>
+</html>

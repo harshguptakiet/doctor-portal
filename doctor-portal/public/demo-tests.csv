@@ -1,0 +1,70 @@
+Test Name,Test Code,Category,Subcategory,Sample Type,Sample Volume,Container,Fasting Required,Price,Turnaround Time,Normal Range Male,Normal Range Female,Unit,Method,Clinical Significance,Prerequisites
+Complete Blood Count,CBC,Hematology,Blood Count,Whole Blood,2 mL,EDTA Tube,No,250,4,4.5-5.5 million cells/mcL,4.0-5.0 million cells/mcL,cells/mcL,Flow Cytometry,Basic blood health assessment,None
+Hemoglobin,HB,Hematology,Blood Count,Whole Blood,2 mL,EDTA Tube,No,150,4,13.5-17.5 g/dL,12.0-15.5 g/dL,g/dL,Spectrophotometry,Oxygen carrying capacity of blood,None
+Fasting Blood Sugar,FBS,Biochemistry,Glucose,Serum,1 mL,Red Top Tube,Yes,120,2,70-100 mg/dL,70-100 mg/dL,mg/dL,Enzymatic,Diabetes screening and monitoring,8-12 hours fasting
+Random Blood Sugar,RBS,Biochemistry,Glucose,Serum,1 mL,Red Top Tube,No,100,2,<140 mg/dL,<140 mg/dL,mg/dL,Enzymatic,Quick glucose level check,None
+HbA1c,HGBA1C,Biochemistry,Glucose,Whole Blood,2 mL,EDTA Tube,No,450,6,<5.7%,<5.7%,%,HPLC,Long-term diabetes control,None
+Lipid Profile,LIPID,Biochemistry,Lipids,Serum,2 mL,Red Top Tube,Yes,350,4,Total: <200 mg/dL,Total: <200 mg/dL,mg/dL,Enzymatic,Cardiovascular risk assessment,12 hours fasting
+Total Cholesterol,CHOL,Biochemistry,Lipids,Serum,1 mL,Red Top Tube,Yes,150,4,<200 mg/dL,<200 mg/dL,mg/dL,Enzymatic,Heart disease risk,12 hours fasting
+HDL Cholesterol,HDL,Biochemistry,Lipids,Serum,1 mL,Red Top Tube,Yes,180,4,>40 mg/dL,>50 mg/dL,mg/dL,Enzymatic,Good cholesterol level,12 hours fasting
+LDL Cholesterol,LDL,Biochemistry,Lipids,Serum,1 mL,Red Top Tube,Yes,180,4,<100 mg/dL,<100 mg/dL,mg/dL,Calculated,Bad cholesterol level,12 hours fasting
+Triglycerides,TG,Biochemistry,Lipids,Serum,1 mL,Red Top Tube,Yes,150,4,<150 mg/dL,<150 mg/dL,mg/dL,Enzymatic,Fat metabolism indicator,12 hours fasting
+Liver Function Test,LFT,Biochemistry,Liver,Serum,2 mL,Red Top Tube,No,400,6,Varies by component,Varies by component,Various,Enzymatic,Liver health assessment,None
+SGPT/ALT,ALT,Biochemistry,Liver,Serum,1 mL,Red Top Tube,No,120,4,10-40 U/L,7-35 U/L,U/L,Enzymatic,Liver enzyme indicator,None
+SGOT/AST,AST,Biochemistry,Liver,Serum,1 mL,Red Top Tube,No,120,4,10-40 U/L,9-32 U/L,U/L,Enzymatic,Liver and heart enzyme,None
+Bilirubin Total,TBIL,Biochemistry,Liver,Serum,1 mL,Red Top Tube,No,100,4,0.2-1.2 mg/dL,0.2-1.2 mg/dL,mg/dL,Spectrophotometry,Liver function and hemolysis,None
+Bilirubin Direct,DBIL,Biochemistry,Liver,Serum,1 mL,Red Top Tube,No,100,4,0.0-0.3 mg/dL,0.0-0.3 mg/dL,mg/dL,Spectrophotometry,Conjugated bilirubin level,None
+Alkaline Phosphatase,ALP,Biochemistry,Liver,Serum,1 mL,Red Top Tube,No,120,4,44-147 U/L,35-104 U/L,U/L,Enzymatic,Liver and bone enzyme,None
+Total Protein,TP,Biochemistry,Protein,Serum,1 mL,Red Top Tube,No,100,4,6.0-8.3 g/dL,6.0-8.3 g/dL,g/dL,Spectrophotometry,Overall protein status,None
+Albumin,ALB,Biochemistry,Protein,Serum,1 mL,Red Top Tube,No,100,4,3.5-5.0 g/dL,3.5-5.0 g/dL,g/dL,Spectrophotometry,Protein synthesis capacity,None
+Kidney Function Test,KFT,Biochemistry,Kidney,Serum,2 mL,Red Top Tube,No,350,6,Varies by component,Varies by component,Various,Enzymatic,Kidney health assessment,None
+Urea,UREA,Biochemistry,Kidney,Serum,1 mL,Red Top Tube,No,80,4,13-45 mg/dL,13-45 mg/dL,mg/dL,Enzymatic,Kidney function marker,None
+Creatinine,CREAT,Biochemistry,Kidney,Serum,1 mL,Red Top Tube,No,100,4,0.7-1.3 mg/dL,0.6-1.1 mg/dL,mg/dL,Enzymatic,Kidney filtration capacity,None
+Uric Acid,UA,Biochemistry,Kidney,Serum,1 mL,Red Top Tube,No,100,4,3.4-7.0 mg/dL,2.4-6.0 mg/dL,mg/dL,Enzymatic,Gout and kidney stones,None
+Thyroid Profile,THYROID,Endocrinology,Thyroid,Serum,2 mL,Red Top Tube,No,600,8,Varies by component,Varies by component,Various,Immunoassay,Thyroid function assessment,None
+TSH,TSH,Endocrinology,Thyroid,Serum,1 mL,Red Top Tube,No,200,6,0.27-4.2 mIU/L,0.27-4.2 mIU/L,mIU/L,Immunoassay,Thyroid stimulating hormone,None
+T3 Total,T3,Endocrinology,Thyroid,Serum,1 mL,Red Top Tube,No,180,6,80-200 ng/dL,80-200 ng/dL,ng/dL,Immunoassay,Active thyroid hormone,None
+T4 Total,T4,Endocrinology,Thyroid,Serum,1 mL,Red Top Tube,No,180,6,5.1-14.1 mcg/dL,5.1-14.1 mcg/dL,mcg/dL,Immunoassay,Thyroid hormone precursor,None
+Free T3,FT3,Endocrinology,Thyroid,Serum,1 mL,Red Top Tube,No,220,6,2.0-4.4 pg/mL,2.0-4.4 pg/mL,pg/mL,Immunoassay,Unbound active hormone,None
+Free T4,FT4,Endocrinology,Thyroid,Serum,1 mL,Red Top Tube,No,220,6,0.93-1.7 ng/dL,0.93-1.7 ng/dL,ng/dL,Immunoassay,Unbound thyroid hormone,None
+Vitamin B12,B12,Biochemistry,Vitamins,Serum,1 mL,Red Top Tube,No,300,8,211-946 pg/mL,211-946 pg/mL,pg/mL,Immunoassay,B12 deficiency assessment,None
+Vitamin D Total,VIT_D,Biochemistry,Vitamins,Serum,1 mL,Red Top Tube,No,800,24,30-100 ng/mL,30-100 ng/mL,ng/mL,Immunoassay,Bone health and immunity,None
+Folate,FOLATE,Biochemistry,Vitamins,Serum,1 mL,Red Top Tube,No,250,8,4.6-18.7 ng/mL,4.6-18.7 ng/mL,ng/mL,Immunoassay,Folate deficiency check,None
+Iron Studies,IRON,Biochemistry,Minerals,Serum,2 mL,Red Top Tube,Yes,400,8,Varies by component,Varies by component,Various,Spectrophotometry,Iron deficiency assessment,12 hours fasting
+Serum Iron,SI,Biochemistry,Minerals,Serum,1 mL,Red Top Tube,Yes,150,6,65-175 mcg/dL,50-170 mcg/dL,mcg/dL,Spectrophotometry,Available iron in blood,12 hours fasting
+TIBC,TIBC,Biochemistry,Minerals,Serum,1 mL,Red Top Tube,Yes,150,6,250-450 mcg/dL,250-450 mcg/dL,mcg/dL,Spectrophotometry,Iron binding capacity,12 hours fasting
+Transferrin Saturation,TSAT,Biochemistry,Minerals,Serum,1 mL,Red Top Tube,Yes,100,6,20-50%,15-50%,%,Calculated,Iron saturation percentage,12 hours fasting
+Ferritin,FERRITIN,Biochemistry,Minerals,Serum,1 mL,Red Top Tube,No,300,8,12-300 ng/mL,12-150 ng/mL,ng/mL,Immunoassay,Iron storage indicator,None
+C-Reactive Protein,CRP,Immunology,Inflammation,Serum,1 mL,Red Top Tube,No,200,4,<0.3 mg/dL,<0.3 mg/dL,mg/dL,Immunoturbidimetry,Inflammation marker,None
+ESR,ESR,Hematology,Inflammation,Whole Blood,2 mL,EDTA Tube,No,100,2,0-15 mm/hr,0-20 mm/hr,mm/hr,Westergren Method,Non-specific inflammation,None
+Prothrombin Time,PT,Hematology,Coagulation,Plasma,2 mL,Blue Top Tube,No,150,4,11-13 seconds,11-13 seconds,seconds,Clot Detection,Blood clotting ability,None
+APTT,APTT,Hematology,Coagulation,Plasma,2 mL,Blue Top Tube,No,150,4,25-35 seconds,25-35 seconds,seconds,Clot Detection,Intrinsic clotting pathway,None
+INR,INR,Hematology,Coagulation,Plasma,2 mL,Blue Top Tube,No,80,4,0.8-1.1,0.8-1.1,Ratio,Calculated,Warfarin monitoring,None
+Urine Routine,URINE_R,Urinology,Basic,Urine,10 mL,Urine Container,No,80,2,Varies by component,Varies by component,Various,Microscopy,Kidney and urinary tract,Clean catch midstream
+Urine Microscopy,URINE_M,Urinology,Basic,Urine,10 mL,Urine Container,No,100,4,Varies by component,Varies by component,Various,Microscopy,Detailed urine analysis,Clean catch midstream
+Urine Culture,URINE_C,Microbiology,Culture,Urine,10 mL,Sterile Container,No,300,48,No growth,No growth,CFU/mL,Culture Method,UTI diagnosis and sensitivity,Sterile collection
+Stool Routine,STOOL_R,Parasitology,Basic,Stool,2-3 grams,Stool Container,No,100,4,Varies by component,Varies by component,Various,Microscopy,GI tract health,Fresh sample
+Stool Culture,STOOL_C,Microbiology,Culture,Stool,2-3 grams,Sterile Container,No,400,48,Normal flora,Normal flora,CFU/gram,Culture Method,Bacterial gastroenteritis,Fresh sterile sample
+Hepatitis B Surface Antigen,HBSAG,Serology,Hepatitis,Serum,1 mL,Red Top Tube,No,150,6,Non-reactive,Non-reactive,Qualitative,Immunoassay,Hepatitis B infection,None
+Hepatitis C Antibody,HCV,Serology,Hepatitis,Serum,1 mL,Red Top Tube,No,200,6,Non-reactive,Non-reactive,Qualitative,Immunoassay,Hepatitis C exposure,None
+HIV Antibody,HIV,Serology,Infectious,Serum,1 mL,Red Top Tube,No,300,6,Non-reactive,Non-reactive,Qualitative,Immunoassay,HIV infection screening,Pre-test counseling
+VDRL,VDRL,Serology,STD,Serum,1 mL,Red Top Tube,No,120,4,Non-reactive,Non-reactive,Qualitative,Flocculation,Syphilis screening,None
+Blood Group & Rh,ABO_RH,Immunohematology,Blood Banking,Whole Blood,2 mL,EDTA Tube,No,100,2,A/B/AB/O Positive/Negative,A/B/AB/O Positive/Negative,Qualitative,Agglutination,Blood typing for transfusion,None
+Prostate Specific Antigen,PSA,Tumor Markers,Prostate,Serum,1 mL,Red Top Tube,No,400,8,<4.0 ng/mL,Not Applicable,ng/mL,Immunoassay,Prostate cancer screening,Male only
+Alpha Fetoprotein,AFP,Tumor Markers,Liver,Serum,1 mL,Red Top Tube,No,350,8,<10 ng/mL,<10 ng/mL,ng/mL,Immunoassay,Liver cancer and pregnancy,None
+CEA,CEA,Tumor Markers,Colon,Serum,1 mL,Red Top Tube,No,400,8,<5.0 ng/mL,<5.0 ng/mL,ng/mL,Immunoassay,Colorectal cancer monitoring,None
+CA 19-9,CA19_9,Tumor Markers,Pancreas,Serum,1 mL,Red Top Tube,No,500,8,<37 U/mL,<37 U/mL,U/mL,Immunoassay,Pancreatic cancer marker,None
+CA 125,CA125,Tumor Markers,Ovary,Serum,1 mL,Red Top Tube,No,500,8,Not Applicable,<35 U/mL,U/mL,Immunoassay,Ovarian cancer marker,Female only
+Troponin I,TROP_I,Cardiology,Cardiac Markers,Serum,1 mL,Red Top Tube,No,600,1,<0.04 ng/mL,<0.04 ng/mL,ng/mL,Immunoassay,Heart attack diagnosis,Stat test
+CK-MB,CKMB,Cardiology,Cardiac Markers,Serum,1 mL,Red Top Tube,No,300,4,0-6.3 ng/mL,0-4.3 ng/mL,ng/mL,Immunoassay,Heart muscle damage,None
+D-Dimer,D_DIMER,Hematology,Coagulation,Plasma,2 mL,Blue Top Tube,No,400,4,<500 ng/mL,<500 ng/mL,ng/mL,Immunoturbidimetry,Blood clot detection,None
+Procalcitonin,PCT,Immunology,Infection,Serum,1 mL,Red Top Tube,No,800,6,<0.25 ng/mL,<0.25 ng/mL,ng/mL,Immunoassay,Bacterial infection marker,None
+Cortisol Morning,CORTISOL_AM,Endocrinology,Adrenal,Serum,1 mL,Red Top Tube,No,300,8,6.2-19.4 mcg/dL,6.2-19.4 mcg/dL,mcg/dL,Immunoassay,Adrenal function,8-10 AM collection
+Testosterone Total,TESTO,Endocrinology,Hormones,Serum,1 mL,Red Top Tube,No,350,8,264-916 ng/dL,15-70 ng/dL,ng/dL,Immunoassay,Male hormone levels,Morning collection
+Estradiol,E2,Endocrinology,Hormones,Serum,1 mL,Red Top Tube,No,300,8,7.6-42.6 pg/mL,12.5-166 pg/mL,pg/mL,Immunoassay,Female hormone levels,None
+Progesterone,PROG,Endocrinology,Hormones,Serum,1 mL,Red Top Tube,No,300,8,0.2-1.4 ng/mL,0.1-25 ng/mL,ng/mL,Immunoassay,Ovulation and pregnancy,Cycle specific
+Prolactin,PRL,Endocrinology,Hormones,Serum,1 mL,Red Top Tube,No,250,8,4.0-15.2 ng/mL,4.8-23.3 ng/mL,ng/mL,Immunoassay,Pituitary function,None
+LH,LH,Endocrinology,Hormones,Serum,1 mL,Red Top Tube,No,250,8,1.7-8.6 mIU/mL,2.4-12.6 mIU/mL,mIU/mL,Immunoassay,Reproductive hormone,None
+FSH,FSH,Endocrinology,Hormones,Serum,1 mL,Red Top Tube,No,250,8,1.5-12.4 mIU/mL,3.5-12.5 mIU/mL,mIU/mL,Immunoassay,Reproductive hormone,None
+Insulin Fasting,INSULIN_F,Endocrinology,Glucose,Serum,1 mL,Red Top Tube,Yes,400,8,2.6-24.9 mIU/L,2.6-24.9 mIU/L,mIU/L,Immunoassay,Insulin resistance,8-12 hours fasting
+C-Peptide,C_PEPTIDE,Endocrinology,Glucose,Serum,1 mL,Red Top Tube,Yes,450,8,1.1-4.4 ng/mL,1.1-4.4 ng/mL,ng/mL,Immunoassay,Pancreatic function,8-12 hours fasting

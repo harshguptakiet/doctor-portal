@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Chat messages - TESTING MODE: Allow all operations
+    // TODO: Restrict to authenticated users in production
+    match /chat_messages/{messageId} {
+      allow read, write: if true; // Temporarily allow all access for testing
+    }
+    
+    // Test collection - for connection testing
+    match /test/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Patients collection
+    match /patients/{patientId} {
+      allow read, write: if true;
+    }
+    
+    // Users/doctors collection
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      allow read, write: if true;
+    }
+    
+    // Call sessions
+    match /call_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+    
+    // Allow access to other collections for development
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

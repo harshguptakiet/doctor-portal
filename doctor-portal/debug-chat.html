@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Chat Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .debug-section {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .error { background: #ffe6e6; border-color: #ffcccc; }
+        .success { background: #e6ffe6; border-color: #ccffcc; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #messages {
+            background: white;
+            border: 1px solid #ddd;
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .message {
+            padding: 5px;
+            margin: 5px 0;
+            border-left: 3px solid #007bff;
+            background: #f8f9fa;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Firebase Chat Debug Tool</h1>
+    
+    <div class="debug-section">
+        <h3>Connection Status</h3>
+        <div id="connectionStatus">Initializing...</div>
+    </div>
+
+    <div class="debug-section">
+        <h3>Send Test Message</h3>
+        <input type="text" id="messageText" placeholder="Type a test message..." />
+        <br>
+        <button onclick="sendTextMessage()">Send Text Message</button>
+        <button onclick="sendSystemMessage()">Send System Message</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>File Upload Test</h3>
+        <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" />
+        <button onclick="uploadFile()">Upload File</button>
+        <div id="uploadStatus"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>Voice Recording Test</h3>
+        <button id="voiceBtn" onclick="toggleVoiceRecording()">Start Voice Recording</button>
+        <div id="voiceStatus"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>Messages</h3>
+        <button onclick="clearMessages()">Clear Messages</button>
+        <div id="messages"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4cHeV25PvdgAgKttpoq3iBMMrtREH9iM",
+            authDomain: "medibot-b2bf7.firebaseapp.com",
+            projectId: "medibot-b2bf7",
+            storageBucket: "medibot-b2bf7.firebasestorage.app",
+            messagingSenderId: "735267785437",
+            appId: "1:735267785437:web:db7c4275659f328f46a934",
+            measurementId: "G-6LB717MSN1"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordingChunks = [];
+        let callSessionId = `debug_session_${Date.now()}`;
+        let userId = 'debug_user_doctor';
+        let userName = 'Debug Doctor';
+
+        // Debug logging
+        function log(message, type = 'info') {
+            const messagesDiv = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                // Try to sign in anonymously, or skip auth if disabled
+                try {
+                    await auth.signInAnonymously();
+                    log('✅ Firebase Auth: Signed in anonymously', 'success');
+                } catch (authError) {
+                    if (authError.code === 'auth/admin-restricted-operation') {
+                        log('⚠️ Anonymous auth disabled - continuing without authentication', 'info');
+                        log('📝 Note: Some operations may fail due to Firestore security rules', 'info');
+                    } else {
+                        throw authError;
+                    }
+                }
+                
+                // Test Firestore connection
+                await db.collection('test').doc('connection').set({
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    test: true
+                });
+                log('✅ Firestore: Connection test successful', 'success');
+                
+                // Test Storage connection
+                try {
+                    const testRef = storage.ref('test/connection.txt');
+                    await testRef.putString('Hello Firebase Storage');
+                    log('✅ Storage: Connection test successful', 'success');
+                } catch (storageError) {
+                    if (storageError.code === 'storage/unauthorized') {
+                        log('⚠️ Storage: Unauthorized access - trying with updated rules...', 'info');
+                        // Try again after a short delay to allow rules to propagate
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const testRef2 = storage.ref('test/connection_retry.txt');
+                        await testRef2.putString('Hello Firebase Storage - Retry');
+                        log('✅ Storage: Connection test successful on retry', 'success');
+                    } else {
+                        throw storageError;
+                    }
+                }
+                
+                document.getElementById('connectionStatus').innerHTML = '✅ All Firebase services connected';
+                document.getElementById('connectionStatus').className = 'success';
+                
+                // Listen to messages
+                setupMessageListener();
+                
+            } catch (error) {
+                log(`❌ Firebase initialization failed: ${error.message}`, 'error');
+                document.getElementById('connectionStatus').innerHTML = `❌ Connection failed: ${error.message}`;
+                document.getElementById('connectionStatus').className = 'error';
+            }
+        }
+
+        // Setup message listener
+        function setupMessageListener() {
+            db.collection('chat_messages')
+                .where('callSessionId', '==', callSessionId)
+                .orderBy('timestamp', 'asc')
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            const message = { id: change.doc.id, ...change.doc.data() };
+                            displayMessage(message);
+                        }
+                    });
+                }, (error) => {
+                    log(`❌ Message listener error: ${error.message}`, 'error');
+                });
+        }
+
+        function displayMessage(message) {
+            const timestamp = message.timestamp ? 
+                (message.timestamp.toDate ? message.timestamp.toDate() : message.timestamp) : 
+                new Date();
+            log(`📨 ${message.senderName}: ${message.message || '[File]'} (${message.type})`, 'success');
+        }
+
+        // Send text message
+        async function sendTextMessage() {
+            const messageText = document.getElementById('messageText').value;
+            if (!messageText.trim()) return;
+
+            try {
+                const chatMessage = {
+                    callSessionId,
+                    senderId: userId,
+                    senderName: userName,
+                    senderRole: 'doctor',
+                    message: messageText.trim(),
+                    type: 'text',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sending'
+                };
+
+                log(`📤 Sending message: "${messageText}"`, 'info');
+                const docRef = await db.collection('chat_messages').add(chatMessage);
+                
+                // Update status to sent
+                await docRef.update({ status: 'sent' });
+                
+                log(`✅ Message sent with ID: ${docRef.id}`, 'success');
+                document.getElementById('messageText').value = '';
+            } catch (error) {
+                log(`❌ Failed to send message: ${error.message}`, 'error');
+            }
+        }
+
+        // Send system message
+        async function sendSystemMessage() {
+            try {
+                const chatMessage = {
+                    callSessionId,
+                    senderId: 'system',
+                    senderName: 'System',
+                    senderRole: 'system',
+                    message: 'Debug test - system message',
+                    type: 'system',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sent'
+                };
+
+                log(`📤 Sending system message`, 'info');
+                const docRef = await db.collection('chat_messages').add(chatMessage);
+                log(`✅ System message sent with ID: ${docRef.id}`, 'success');
+            } catch (error) {
+                log(`❌ Failed to send system message: ${error.message}`, 'error');
+            }
+        }
+
+        // Upload file
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                log('❌ No file selected', 'error');
+                return;
+            }
+
+            try {
+                document.getElementById('uploadStatus').innerHTML = '⏳ Uploading...';
+                log(`📤 Uploading file: ${file.name} (${file.size} bytes)`, 'info');
+
+                // Upload file to Firebase Storage
+                const fileRef = storage.ref(`chat_files/${callSessionId}/${Date.now()}_${file.name}`);
+                const uploadTask = fileRef.put(file);
+
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        document.getElementById('uploadStatus').innerHTML = `⏳ Uploading... ${progress.toFixed(1)}%`;
+                        log(`📤 Upload progress: ${progress.toFixed(1)}%`, 'info');
+                    },
+                    (error) => {
+                        log(`❌ Upload failed: ${error.message}`, 'error');
+                        document.getElementById('uploadStatus').innerHTML = `❌ Upload failed: ${error.message}`;
+                    },
+                    async () => {
+                        // Upload completed successfully
+                        const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                        log(`✅ File uploaded successfully: ${downloadURL}`, 'success');
+
+                        // Create chat message
+                        const messageType = file.type.startsWith('image/') ? 'image' : 'file';
+                        const chatMessage = {
+                            callSessionId,
+                            senderId: userId,
+                            senderName: userName,
+                            senderRole: 'doctor',
+                            message: `Shared a file: ${file.name}`,
+                            type: messageType,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            status: 'sending',
+                            fileUrl: downloadURL,
+                            fileName: file.name,
+                            fileSize: file.size,
+                            fileMimeType: file.type
+                        };
+
+                        const docRef = await db.collection('chat_messages').add(chatMessage);
+                        await docRef.update({ status: 'sent' });
+
+                        log(`✅ Chat message created with ID: ${docRef.id}`, 'success');
+                        document.getElementById('uploadStatus').innerHTML = '✅ Upload completed';
+                    }
+                );
+
+            } catch (error) {
+                log(`❌ Upload error: ${error.message}`, 'error');
+                document.getElementById('uploadStatus').innerHTML = `❌ Upload error: ${error.message}`;
+            }
+        }
+
+        // Toggle voice recording
+        async function toggleVoiceRecording() {
+            const btn = document.getElementById('voiceBtn');
+            const status = document.getElementById('voiceStatus');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            sampleRate: 44100,
+                            echoCancellation: true,
+                            noiseSuppression: true
+                        } 
+                    });
+
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm'
+                    });
+
+                    recordingChunks = [];
+
+                    mediaRecorder.addEventListener('dataavailable', (event) => {
+                        if (event.data.size > 0) {
+                            recordingChunks.push(event.data);
+                        }
+                    });
+
+                    mediaRecorder.addEventListener('stop', async () => {
+                        const voiceBlob = new Blob(recordingChunks, { type: 'audio/webm' });
+                        log(`🎤 Voice recording completed: ${voiceBlob.size} bytes`, 'info');
+                        await uploadVoiceMessage(voiceBlob);
+                        
+                        // Clean up
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.textContent = 'Stop Recording';
+                    status.innerHTML = '🎤 Recording...';
+                    log('🎤 Voice recording started', 'info');
+
+                } catch (error) {
+                    log(`❌ Failed to start recording: ${error.message}`, 'error');
+                    status.innerHTML = `❌ Recording failed: ${error.message}`;
+                }
+            } else {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+                isRecording = false;
+                btn.textContent = 'Start Voice Recording';
+                status.innerHTML = '⏳ Processing...';
+            }
+        }
+
+        // Upload voice message
+        async function uploadVoiceMessage(voiceBlob) {
+            try {
+                const fileName = `voice_${Date.now()}.webm`;
+                const voiceRef = storage.ref(`voice_messages/${callSessionId}/${fileName}`);
+                
+                log(`🎤 Uploading voice message: ${fileName}`, 'info');
+                const uploadResult = await voiceRef.put(voiceBlob);
+                const voiceUrl = await uploadResult.ref.getDownloadURL();
+                
+                log(`✅ Voice uploaded: ${voiceUrl}`, 'success');
+
+                // Create chat message
+                const chatMessage = {
+                    callSessionId,
+                    senderId: userId,
+                    senderName: userName,
+                    senderRole: 'doctor',
+                    type: 'voice',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sending',
+                    fileUrl: voiceUrl,
+                    fileName,
+                    fileSize: voiceBlob.size,
+                    fileMimeType: voiceBlob.type,
+                    voiceDuration: 5 // Mock duration
+                };
+
+                const docRef = await db.collection('chat_messages').add(chatMessage);
+                await docRef.update({ status: 'sent' });
+
+                log(`✅ Voice message sent with ID: ${docRef.id}`, 'success');
+                document.getElementById('voiceStatus').innerHTML = '✅ Voice message sent';
+
+            } catch (error) {
+                log(`❌ Voice upload failed: ${error.message}`, 'error');
+                document.getElementById('voiceStatus').innerHTML = `❌ Voice upload failed: ${error.message}`;
+            }
+        }
+
+        // Clear messages
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

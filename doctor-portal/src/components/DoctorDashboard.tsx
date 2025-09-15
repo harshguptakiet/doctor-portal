@@ -17,6 +17,19 @@ import {
   Calendar,
   Settings,
   Database,
+  LogOut,
+  Bell,
+  Search,
+  ChevronDown,
+  User,
+  CreditCard,
+  HelpCircle,
+  Shield,
+  Mail,
+  MapPin,
+  Stethoscope,
+  Star,
+  Award,
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -30,9 +43,12 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
-import PatientManager from './components/PatientManager';
-import type { Patient } from './components/PatientTable';
-import WebRTCCallManager from './components/WebRTCCallManager';
+import PatientManager from './PatientManager';
+import type { Patient } from './PatientTable';
+import WebRTCCallManager from './WebRTCCallManager';
+import { logout, getCurrentUser, onAuthStateChange } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
+import type { Doctor } from '../types/auth';
 
 ChartJS.register(
   CategoryScale,
@@ -118,11 +134,22 @@ const cx = (...c: (string | null | undefined | false)[]) => c.filter(Boolean).jo
 const isToday = (iso: string) => { const d=new Date(iso); const t=new Date(); return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear(); };
 const fmtDate = (iso?: string) => { if(!iso) return '—'; const d=new Date(iso); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); };
 
-const App: React.FC = () => {
+const DoctorDashboard: React.FC = () => {
+  const navigate = useNavigate();
   // Temporarily remove Firebase to debug white page - use mock data
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  
+  // Doctor profile and auth state
+  const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [notifications] = useState([
+    { id: '1', title: 'New patient registered', time: '5 min ago', type: 'info' },
+    { id: '2', title: 'Appointment reminder', time: '10 min ago', type: 'warning' },
+    { id: '3', title: 'Lab results ready', time: '1 hour ago', type: 'success' },
+  ]);
+  const [showNotifications, setShowNotifications] = useState(false);
   
   // Generate appointments throughout the day (24-hour schedule)
   const generateTimeSlot = (hour: number, minute: number = 0) => {
@@ -165,6 +192,65 @@ const App: React.FC = () => {
     fileName?: string;
   }>>([]);
   const [newMessage, setNewMessage] = useState('');
+
+  // Handle logout
+  const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure you want to logout?');
+    if (confirmed) {
+      try {
+        await logout();
+        navigate('/login');
+      } catch (error) {
+        console.error('Logout error:', error);
+        alert('Error logging out. Please try again.');
+      }
+    }
+  };
+
+  // Load doctor profile
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChange(async (authState) => {
+      if (authState.user && authState.user.role === 'doctor') {
+        setCurrentDoctor(authState.user as Doctor);
+      } else if (!authState.loading) {
+        // Not a doctor or not authenticated, redirect to login
+        navigate('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Close dropdowns when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      setShowProfileDropdown(false);
+      setShowNotifications(false);
+    };
+    
+    if (showProfileDropdown || showNotifications) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showProfileDropdown, showNotifications]);
+
+  // Get doctor initials for avatar
+  const getDoctorInitials = () => {
+    if (!currentDoctor?.displayName) return 'DR';
+    const names = currentDoctor.displayName.split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return names[0].substring(0, 2).toUpperCase();
+  };
+
+  // Get formatted doctor name
+  const getFormattedDoctorName = () => {
+    if (!currentDoctor?.displayName) return 'Doctor';
+    return currentDoctor.displayName.startsWith('Dr.') 
+      ? currentDoctor.displayName 
+      : `Dr. ${currentDoctor.displayName}`;
+  };
 
   // Call timer effect
   React.useEffect(() => {
@@ -480,7 +566,7 @@ const App: React.FC = () => {
       
       setLoading(false);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error initializing sample data:', error);
       console.error('📋 Error details:', {
         name: error.name,
@@ -534,7 +620,7 @@ const App: React.FC = () => {
       console.log('🎉 Firebase connection test completed successfully!');
       alert('✅ Firebase connection test successful! Check the console for details.');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Firebase connection test failed:', error);
       setError(`Connection test failed: ${error.message}`);
     } finally {
@@ -644,8 +730,8 @@ const App: React.FC = () => {
       {
         label: 'Patients added over the Year',
         data: [400, 450, 500, 550, 600, 650, 700, 800, 850, 950, 1150, 1200],
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderColor: 'rgba(59, 130, 246, 1)',
+        backgroundColor: 'rgba(251, 146, 60, 0.8)',
+        borderColor: 'rgba(251, 146, 60, 1)',
         borderWidth: 1,
         borderRadius: 8,
       },
@@ -689,10 +775,10 @@ const App: React.FC = () => {
       {
         label: 'Online',
         data: [20, 25, 35, 45, 50, 55, 60, 65, 70, 75, 80, 85],
-        borderColor: 'rgba(59, 130, 246, 1)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgba(251, 146, 60, 1)',
+        backgroundColor: 'rgba(251, 146, 60, 0.1)',
         tension: 0.4,
-        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+        pointBackgroundColor: 'rgba(251, 146, 60, 1)',
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
         pointRadius: 4,
@@ -778,6 +864,213 @@ const App: React.FC = () => {
     </div>
   );
 
+  // Doctor Header Component
+  const DoctorHeader: React.FC = () => (
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Left section - Current page info */}
+          <div className="flex items-center space-x-4">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900 capitalize">
+                {activeView === 'dashboard' ? 'Dashboard' :
+                 activeView === 'queue' ? 'Patient Queue' :
+                 activeView === 'patients' ? 'Patients' :
+                 activeView === 'settings' ? 'Settings' : 'Dashboard'}
+              </h1>
+              <p className="text-sm text-gray-500">
+                {new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+          </div>
+
+          {/* Right section - Search, notifications, profile */}
+          <div className="flex items-center space-x-4">
+            {/* Search Bar */}
+            <div className="relative hidden md:block">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search patients, appointments..."
+                className="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowNotifications(!showNotifications);
+                  setShowProfileDropdown(false);
+                }}
+                className="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Bell className="h-5 w-5" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-400"></span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 py-2 border-b border-gray-100">
+                    <h3 className="text-sm font-medium text-gray-900">Notifications</h3>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.map((notification) => (
+                      <div key={notification.id} className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900">{notification.title}</p>
+                            <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                          </div>
+                          <div className={`w-2 h-2 rounded-full mt-2 ${
+                            notification.type === 'info' ? 'bg-blue-400' :
+                            notification.type === 'warning' ? 'bg-yellow-400' :
+                            notification.type === 'success' ? 'bg-green-400' : 'bg-gray-400'
+                          }`}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-2 border-t border-gray-100">
+                    <button className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                      View all notifications
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Doctor Profile Dropdown */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowProfileDropdown(!showProfileDropdown);
+                  setShowNotifications(false);
+                }}
+                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="h-8 w-8 rounded-full bg-orange-600 flex items-center justify-center text-white font-medium text-sm">
+                  {getDoctorInitials()}
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium text-gray-900">{getFormattedDoctorName()}</p>
+                  <p className="text-xs text-gray-500">{currentDoctor?.specialization}</p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+
+              {/* Profile Dropdown */}
+              {showProfileDropdown && currentDoctor && (
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  {/* Profile Header */}
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-12 w-12 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold text-lg">
+                        {getDoctorInitials()}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">{getFormattedDoctorName()}</p>
+                        <p className="text-xs text-gray-500">{currentDoctor.email}</p>
+                        <div className="flex items-center mt-1">
+                          <Stethoscope className="h-3 w-3 text-orange-500 mr-1" />
+                          <span className="text-xs text-gray-600">{currentDoctor.specialization}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Quick Stats */}
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-orange-50 rounded-lg px-2 py-1">
+                        <p className="text-xs font-semibold text-orange-600">{currentDoctor.experience}+</p>
+                        <p className="text-[10px] text-gray-500">Years</p>
+                      </div>
+                      <div className="bg-green-50 rounded-lg px-2 py-1">
+                        <p className="text-xs font-semibold text-green-600">{currentDoctor.totalConsultations}</p>
+                        <p className="text-[10px] text-gray-500">Patients</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg px-2 py-1">
+                        <div className="flex items-center justify-center">
+                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                          <p className="text-xs font-semibold text-blue-600 ml-0.5">
+                            {currentDoctor.rating || '5.0'}
+                          </p>
+                        </div>
+                        <p className="text-[10px] text-gray-500">Rating</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="py-1">
+                    <button 
+                      onClick={() => {
+                        setActiveView('settings');
+                        setShowProfileDropdown(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <User className="h-4 w-4 mr-3 text-gray-400" />
+                      View Profile
+                    </button>
+                    
+                    <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Settings className="h-4 w-4 mr-3 text-gray-400" />
+                      Account Settings
+                    </button>
+                    
+                    <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <CreditCard className="h-4 w-4 mr-3 text-gray-400" />
+                      Billing & Payments
+                    </button>
+                    
+                    <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <HelpCircle className="h-4 w-4 mr-3 text-gray-400" />
+                      Help & Support
+                    </button>
+                    
+                    {currentDoctor.isVerified ? (
+                      <div className="flex items-center px-4 py-2 text-sm text-green-700">
+                        <Shield className="h-4 w-4 mr-3 text-green-500" />
+                        Verified Doctor
+                      </div>
+                    ) : (
+                      <div className="flex items-center px-4 py-2 text-sm text-amber-700">
+                        <Shield className="h-4 w-4 mr-3 text-amber-500" />
+                        Verification Pending
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-gray-100 py-1">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4 mr-3 text-red-500" />
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+
   const DashboardView = () => (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -790,7 +1083,7 @@ const App: React.FC = () => {
           <div className="text-sm">
             <span className="text-gray-500">Patients: </span>
             <span className="font-medium">{patients.length}</span>
-            {loading && <span className="text-blue-600 ml-2">Loading...</span>}
+            {loading && <span className="text-orange-600 ml-2">Loading...</span>}
           </div>
           
           {/* Test Connection Button */}
@@ -815,7 +1108,7 @@ const App: React.FC = () => {
               loading 
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : patients.length === 0 
-                  ? 'bg-sky-600 hover:bg-sky-700'
+                  ? 'bg-orange-600 hover:bg-orange-700'
                   : 'bg-green-600 hover:bg-green-700'
             }`}
             title={patients.length === 0 ? "Load sample data to test the Firebase integration" : "Add more sample data"}
@@ -857,7 +1150,7 @@ const App: React.FC = () => {
       )}
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Completed Appointments" value={stats.completed} icon={<Activity className="text-emerald-600" size={20} />} />
-        <StatCard title="Total Patients" value={stats.totalPatients} icon={<Users className="text-sky-600" size={20} />} />
+        <StatCard title="Total Patients" value={stats.totalPatients} icon={<Users className="text-orange-600" size={20} />} />
         <StatCard title="Cancelled Appointments" value={stats.cancelled} icon={<ClipboardList className="text-rose-600" size={20} />} />
         <StatCard title="Patients in Queue" value={stats.inQueue} icon={<ListChecks className="text-amber-600" size={20} />} />
       </div>
@@ -913,9 +1206,9 @@ const App: React.FC = () => {
                     return (
                       <div key={appt.id} className="flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
                         {/* Patient logo placeholder (replace src with patient.profileImage later) */}
-                        <div className="h-16 w-16 rounded-lg bg-sky-100 flex items-center justify-center mb-2">
+                        <div className="h-16 w-16 rounded-lg bg-orange-100 flex items-center justify-center mb-2">
                           {/* Replace with <img src={patient.profileImage} ... /> when available */}
-                          <span className="text-sky-700 font-bold text-xl">
+                          <span className="text-orange-700 font-bold text-xl">
                             {patient ? patient.firstName.charAt(0) + patient.lastName.charAt(0) : 'PT'}
                           </span>
                         </div>
@@ -1175,8 +1468,8 @@ const App: React.FC = () => {
 
         {/* Active Patient Section - Only show when there's an active call */}
         {activeCall && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
-            <div className="px-6 py-4 border-b border-blue-100">
+          <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl shadow-sm">
+            <div className="px-6 py-4 border-b border-orange-100">
               <h2 className="text-lg font-semibold text-gray-800">Active Call Session</h2>
             </div>
             <div className="p-6">
@@ -1184,7 +1477,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-4">
                   {/* Patient Avatar */}
                   <div className="relative">
-                    <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                    <div className="h-12 w-12 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold text-lg">
                       {activeCall.patientName.charAt(0)}
                     </div>
                     <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white rounded-full"></div>
@@ -1288,13 +1581,13 @@ const App: React.FC = () => {
               const statusColor = {
                 'completed': 'bg-green-100 text-green-700',
                 'in-queue': 'bg-amber-100 text-amber-700',
-                'scheduled': 'bg-blue-100 text-blue-700',
+                'scheduled': 'bg-orange-100 text-orange-700',
                 'cancelled': 'bg-red-100 text-red-700',
                 'rescheduling': 'bg-purple-100 text-purple-700'
               };
 
               return (
-                <div key={appt.id} className={`px-6 py-4 ${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'} transition`}>
+                <div key={appt.id} className={`px-6 py-4 ${isEditing ? 'bg-orange-50' : 'hover:bg-gray-50'} transition`}>
                   {!isEditing ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 min-w-0 flex-1">
@@ -1311,7 +1604,7 @@ const App: React.FC = () => {
                           appt.status === 'completed' ? 'bg-green-500' :
                           appt.status === 'in-queue' ? 'bg-amber-500' :
                           appt.status === 'cancelled' ? 'bg-red-500' :
-                          appt.status === 'rescheduling' ? 'bg-purple-500' : 'bg-blue-500'
+                          appt.status === 'rescheduling' ? 'bg-purple-500' : 'bg-orange-500'
                         }`}>
                           {p ? p.firstName.charAt(0) + p.lastName.charAt(0) : 'PT'}
                         </div>
@@ -1338,7 +1631,7 @@ const App: React.FC = () => {
                             </p>
                           )}
                           {appt.followUpTime && appt.status === 'completed' && (
-                            <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
+                            <p className="text-xs text-orange-600 flex items-center gap-1 mt-1">
                               <Clock size={12} />
                               <span className="font-medium">Follow-up: {new Date(appt.followUpTime).toLocaleString()}</span>
                             </p>
@@ -1378,10 +1671,10 @@ const App: React.FC = () => {
                           </button>
                         )}
                         {/* Follow-up button for completed appointments */}
-                        {appt.status === 'completed' && (
+                          {appt.status === 'completed' && (
                           <button
                             onClick={() => handleSetFollowUp(appt.id)}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition"
+                            className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition"
                             title={appt.followUpTime ? "Update follow-up time" : "Set follow-up time"}
                           >
                             <Clock size={16} />
@@ -1389,7 +1682,7 @@ const App: React.FC = () => {
                         )}
                         <button
                           onClick={() => startEditAppointment(appt)}
-                          className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition"
+                          className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition"
                           title="Edit appointment"
                         >
                           <Edit3 size={16} />
@@ -1411,7 +1704,7 @@ const App: React.FC = () => {
                           <select
                             value={editForm.patientId}
                             onChange={(e) => setEditForm(prev => ({ ...prev, patientId: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                             title="Select patient"
                           >
                             {patients.map(patient => (
@@ -1428,7 +1721,7 @@ const App: React.FC = () => {
                             type="datetime-local"
                             value={editForm.scheduledFor.slice(0, 16)}
                             onChange={(e) => setEditForm(prev => ({ ...prev, scheduledFor: new Date(e.target.value).toISOString() }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                             title="Select appointment time"
                           />
                         </div>
@@ -1438,7 +1731,7 @@ const App: React.FC = () => {
                           <select
                             value={editForm.status}
                             onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value as AppointmentStatus }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                             title="Select appointment status"
                           >
                             <option value="scheduled">Scheduled</option>
@@ -1456,7 +1749,7 @@ const App: React.FC = () => {
                           type="text"
                           value={editForm.reason}
                           onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                           placeholder="Appointment reason"
                           title="Enter appointment reason"
                         />
@@ -1472,7 +1765,7 @@ const App: React.FC = () => {
                               ...prev, 
                               followUpTime: e.target.value ? new Date(e.target.value).toISOString() : ''
                             }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                             placeholder="Select follow-up time"
                             title="Enter follow-up time"
                           />
@@ -1488,7 +1781,7 @@ const App: React.FC = () => {
                         </button>
                         <button
                           onClick={saveAppointmentEdit}
-                          className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition flex items-center gap-2"
+                          className="px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 rounded-lg transition flex items-center gap-2"
                         >
                           <Save size={16} />
                           Save Changes
@@ -1521,7 +1814,7 @@ const App: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
             <select 
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 text-sm"
               title="Select theme"
             >
               <option>Light Mode</option>
@@ -1532,11 +1825,11 @@ const App: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">Notifications</label>
             <div className="space-y-2">
               <label className="flex items-center">
-                <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" defaultChecked />
+              <input type="checkbox" className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" defaultChecked />
                 <span className="ml-2 text-sm text-gray-700">Appointment reminders</span>
               </label>
               <label className="flex items-center">
-                <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" defaultChecked />
+              <input type="checkbox" className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" defaultChecked />
                 <span className="ml-2 text-sm text-gray-700">New patient alerts</span>
               </label>
             </div>
@@ -1556,21 +1849,33 @@ const App: React.FC = () => {
     }
   };
 
+  // Show loading state while waiting for auth
+  if (!currentDoctor) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-full flex bg-gray-50 text-gray-800">
       <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
         <div className="h-16 px-5 flex items-center gap-2 border-b border-gray-100">
-          <div className="h-10 w-10 rounded-lg bg-sky-600 flex items-center justify-center text-white font-bold text-lg">DP</div>
+        <div className="h-10 w-10 rounded-lg bg-orange-600 flex items-center justify-center text-white font-bold text-lg">DP</div>
           <div>
             <p className="font-semibold tracking-tight text-gray-800">Doctor Portal</p>
-            <p className="text-[10px] uppercase font-medium text-sky-600 tracking-wide">v1.0</p>
+            <p className="text-[10px] uppercase font-medium text-orange-600 tracking-wide">v1.0</p>
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
             {navItems.map(item => (
               <li key={item.key}>
-                <button onClick={()=>setActiveView(item.key)} className={cx('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-sky-500/50', activeView===item.key ? 'bg-sky-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100')}>
+                <button onClick={()=>setActiveView(item.key)} className={cx('w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-orange-500/50', activeView===item.key ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100')}>
                   <span className="shrink-0">{item.icon}</span>
                   <span className="truncate">{item.label}</span>
                 </button>
@@ -1581,10 +1886,10 @@ const App: React.FC = () => {
         
         {/* Mini Calendar Component */}
         <div className="px-3 py-4 border-t border-gray-100">
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-100 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-800">Schedule Overview</h3>
-              <div className="text-xs text-blue-600 font-medium">
+              <div className="text-xs font-medium text-orange-600">
                 {new Date().getFullYear()}
               </div>
             </div>
@@ -1620,7 +1925,7 @@ const App: React.FC = () => {
                       className={`
                         relative text-center p-1 rounded transition-colors cursor-pointer
                         ${isCurrentMonth ? 'text-gray-700' : 'text-gray-300'}
-                        ${isToday ? 'bg-blue-500 text-white font-bold' : 'hover:bg-blue-100'}
+                        ${isToday ? 'bg-orange-500 text-white font-bold' : 'hover:bg-orange-100'}
                         ${hasAppointments ? 'ring-1 ring-green-400' : ''}
                       `}
                     >
@@ -1637,7 +1942,7 @@ const App: React.FC = () => {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-white/60 rounded-lg p-2 text-center">
-                <div className="font-bold text-blue-600">
+                <div className="font-bold text-orange-600">
                   {queueAppointments.filter(appt => {
                     const apptDate = new Date(appt.scheduledFor);
                     const today = new Date();
@@ -1662,10 +1967,10 @@ const App: React.FC = () => {
             
             {/* Legend */}
             <div className="mt-3 flex items-center justify-center space-x-3 text-[10px]">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-600">Today</span>
-              </div>
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <span className="text-gray-600">Today</span>
+            </div>
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-gray-600">Appointments</span>
@@ -1674,16 +1979,40 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <div className="p-4 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-2">
-          <UserCircle2 size={16} className="text-gray-400" />
-          <span>Signed in as Doctor</span>
+        <div className="p-4 border-t border-gray-100 text-xs text-gray-500 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center text-white font-medium text-[10px]">
+              {getDoctorInitials()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-gray-700 truncate">
+                {currentDoctor?.displayName || 'Doctor'}
+              </p>
+              <p className="text-[10px] text-gray-500 truncate">
+                {currentDoctor?.isVerified ? '✓ Verified' : 'Pending verification'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition flex-shrink-0"
+            title="Logout"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto p-8">
-          {loading && <div className="mb-6 rounded-lg bg-white border border-gray-200 p-4 text-sm text-gray-500">Loading data...</div>}
-          {error && <div className="mb-6 rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">{error}</div>}
-          {renderView()}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Doctor Header */}
+        <DoctorHeader />
+        
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto p-8">
+            {loading && <div className="mb-6 rounded-lg bg-white border border-gray-200 p-4 text-sm text-gray-500">Loading data...</div>}
+            {error && <div className="mb-6 rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">{error}</div>}
+            {renderView()}
+          </div>
         </div>
       </main>
 
@@ -1696,7 +2025,7 @@ const App: React.FC = () => {
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
                     {activeCall.patientName.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div>
@@ -1743,7 +2072,7 @@ const App: React.FC = () => {
               {/* Video Call Simulation */}
               <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-32 h-32 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-4xl mb-4 mx-auto">
+                  <div className="w-32 h-32 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-4xl mb-4 mx-auto">
                     {activeCall.patientName.split(' ').map(n => n[0]).join('')}
                   </div>
                   <h3 className="text-2xl font-semibold text-white mb-2">{activeCall.patientName}</h3>
@@ -1753,7 +2082,7 @@ const App: React.FC = () => {
 
               {/* Doctor's Video (Small Window) */}
               <div className="absolute top-4 right-4 w-48 h-36 bg-gray-700 rounded-lg border-2 border-gray-600 overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-orange-600 to-orange-700 flex items-center justify-center">
                   <div className="text-center">
                     <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xl mb-2">
                       DR
@@ -1819,7 +2148,7 @@ const App: React.FC = () => {
                   onClick={() => setActiveTab('ehr')}
                   className={`flex-1 px-4 py-3 text-sm font-medium ${
                     activeTab === 'ehr' 
-                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+                      ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -1829,7 +2158,7 @@ const App: React.FC = () => {
                   onClick={() => setActiveTab('chat')}
                   className={`flex-1 px-4 py-3 text-sm font-medium ${
                     activeTab === 'chat' 
-                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+                      ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -1839,7 +2168,7 @@ const App: React.FC = () => {
                   onClick={() => setActiveTab('notes')}
                   className={`flex-1 px-4 py-3 text-sm font-medium ${
                     activeTab === 'notes' 
-                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+                      ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -1860,7 +2189,7 @@ const App: React.FC = () => {
                 return (
                   <div className="space-y-4">
                     {/* Patient Info */}
-                    <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="bg-orange-50 rounded-lg p-4">
                       <h3 className="font-semibold text-gray-900 mb-2">Patient Information</h3>
                       {patient ? (
                         <div className="space-y-2 text-sm">
@@ -1937,14 +2266,14 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Follow-up Scheduling */}
-                    <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="bg-orange-50 rounded-lg p-4">
                       <h3 className="font-semibold text-gray-900 mb-2">Schedule Follow-up</h3>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Follow-up Date & Time</label>
                           <input
                             type="datetime-local"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                             aria-label="Follow-up Date & Time"
                           />
                         </div>
@@ -1953,10 +2282,10 @@ const App: React.FC = () => {
                           <input
                             type="text"
                             placeholder="Follow-up reason"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                           />
                         </div>
-                        <button className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                        <button className="w-full bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium">
                           Schedule Follow-up
                         </button>
                       </div>
@@ -1980,11 +2309,13 @@ const App: React.FC = () => {
                         <div key={msg.id} className={`flex ${msg.sender === 'doctor' ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                             msg.sender === 'doctor' 
-                              ? 'bg-blue-500 text-white' 
+                              ? 'bg-orange-500 text-white' 
                               : 'bg-gray-200 text-gray-900'
                           }`}>
                             <p className="text-sm">{msg.message}</p>
-                            <p className="text-xs mt-1 opacity-70">
+                            <p className={`text-xs mt-1 ${
+                              msg.sender === 'doctor' ? 'text-orange-100' : 'text-gray-500'
+                            }`}>
                               {msg.timestamp.toLocaleTimeString()}
                             </p>
                           </div>
@@ -1993,53 +2324,54 @@ const App: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Chat Input */}
-                  <div className="border-t border-gray-200 p-4">
+                  {/* Message Input */}
+                  <div className="p-4 border-t border-gray-200">
                     <div className="flex space-x-2">
                       <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type a message..."
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                         onKeyPress={async (e) => {
                           if (e.key === 'Enter' && newMessage.trim()) {
-                            await addChatMessageToFirebase({
-                              sender: 'doctor',
-                              message: newMessage,
+                            const message = {
+                              sender: 'doctor' as const,
+                              message: newMessage.trim(),
                               timestamp: new Date(),
-                              type: 'text'
-                            });
-                            setNewMessage('');
+                              type: 'text' as const,
+                            };
+                            
+                            try {
+                              await addChatMessageToFirebase(message);
+                              setNewMessage('');
+                            } catch (error) {
+                              console.error('Error sending message:', error);
+                            }
                           }
                         }}
                       />
                       <button 
                         onClick={async () => {
                           if (newMessage.trim()) {
-                            await addChatMessageToFirebase({
-                              sender: 'doctor',
-                              message: newMessage,
+                            const message = {
+                              sender: 'doctor' as const,
+                              message: newMessage.trim(),
                               timestamp: new Date(),
-                              type: 'text'
-                            });
-                            setNewMessage('');
+                              type: 'text' as const,
+                            };
+                            
+                            try {
+                              await addChatMessageToFirebase(message);
+                              setNewMessage('');
+                            } catch (error) {
+                              console.error('Error sending message:', error);
+                            }
                           }
                         }}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                       >
                         Send
-                      </button>
-                    </div>
-                    <div className="flex items-center mt-2 space-x-2">
-                      <button className="text-gray-500 hover:text-gray-700 p-1">
-                        📎
-                      </button>
-                      <button className="text-gray-500 hover:text-gray-700 p-1">
-                        📷
-                      </button>
-                      <button className="text-gray-500 hover:text-gray-700 p-1">
-                        🎤
                       </button>
                     </div>
                   </div>
@@ -2047,41 +2379,19 @@ const App: React.FC = () => {
               )}
 
               {activeTab === 'notes' && (
-                <div className="p-4 h-full">
-                  <div className="h-full flex flex-col space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Session Notes</h3>
-                      <textarea
-                        placeholder="Enter your notes about this consultation..."
-                        className="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
-                      />
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Diagnosis</h3>
-                      <input
-                        type="text"
-                        placeholder="Enter diagnosis..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Prescription</h3>
-                      <textarea
-                        placeholder="Enter prescription details..."
-                        className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                        Save Notes
-                      </button>
-                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                        Generate Report
-                      </button>
-                    </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-900 mb-4">Consultation Notes</h3>
+                  <textarea
+                    className="w-full h-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                    placeholder="Add your consultation notes here..."
+                  />
+                  <div className="mt-4 flex justify-end space-x-2">
+                    <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                      Clear
+                    </button>
+                    <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                      Save Notes
+                    </button>
                   </div>
                 </div>
               )}
@@ -2089,28 +2399,11 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {/* WebRTC Call Manager */}
-      <WebRTCCallManager 
-        patients={patients}
-        onCallEnd={async (session) => {
-          console.log('📞 WebRTC call ended:', session);
-          // Mark appointment as completed if it was a scheduled call
-          if (session.appointmentId) {
-            try {
-              await updateAppointmentInFirebase(session.appointmentId, { status: 'completed' });
-              console.log('✅ Appointment marked as completed after WebRTC call');
-            } catch (error) {
-              console.error('❌ Error updating appointment status after call:', error);
-            }
-          }
-          // Also end any legacy active call state
-          setActiveCall(null);
-          setCallTimer('00:00');
-        }}
-      />
+
+      {/* WebRTC Call Manager Component */}
+      <WebRTCCallManager />
     </div>
   );
 };
 
-export default App;
+export default DoctorDashboard;

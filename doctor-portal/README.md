@@ -1,23 +1,44 @@
-# Doctor Portal - React TypeScript Firebase App
+# Doctor Portal - Comprehensive Healthcare Management System
 
-A professional, single-file React application for medical practice management built with TypeScript, Tailwind CSS, and Firebase Firestore.
+A modern React + TypeScript healthcare management system with multi-portal support for doctors, pharmacies, pathology labs, and patients.
 
 ## 🏥 Features
 
-### Core Functionality
-- **Dashboard**: Real-time statistics and today's appointments overview
-- **Patient Queue**: Live queue management with automatic updates
-- **Patient Management**: Complete patient database with search-friendly table
-- **Calendar**: Placeholder for future scheduling features
-- **Real-time Updates**: Patient queue updates instantly via Firestore listeners
+### 🏥 Doctor Portal
+- Patient management and consultation
+- Prescription management with medicine search
+- Video calling with WebRTC
+- Real-time messaging and notifications
+- Dashboard with analytics
 
-### Technical Stack
-- **Frontend**: React 19 + TypeScript
-- **Styling**: Tailwind CSS (utility-first)
-- **Database**: Firebase Firestore (real-time NoSQL)
-- **Icons**: Lucide React
+### 💊 Pharmacy Portal
+- Pharmacy registration and profile management
+- Medicine inventory management
+- Order processing and fulfillment
+- CSV import/export for bulk medicine data
+- Integration with doctor prescriptions
+
+### 🔬 Pathology Portal
+- Laboratory registration and accreditation
+- Test catalog management
+- Sample tracking and reporting
+- Results management
+- Integration with doctor referrals
+
+### 👤 Patient Portal
+- Patient registration and profile
+- Appointment booking
+- Medical history access
+- Prescription tracking
+- Test results viewing
+
+## Technology Stack
+
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Firebase (Firestore, Auth, Storage)
+- **Real-time Communication**: WebRTC, Firebase Realtime Database
 - **Build Tool**: Vite
-- **Architecture**: Single-file component design
+- **Deployment**: Firebase Hosting ready
 
 ## 🚀 Quick Start
 

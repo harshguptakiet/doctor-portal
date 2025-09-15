@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Video Call Demo</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  
+  <!-- Firebase SDKs -->
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, addDoc, query, orderBy, where, onSnapshot, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    
+    // Firebase configuration - Your actual Firebase project configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4cHeV25PvdgAgKttpoq3iBMMrtREH9iM",
+      authDomain: "medibot-b2bf7.firebaseapp.com",
+      projectId: "medibot-b2bf7",
+      storageBucket: "medibot-b2bf7.firebasestorage.app",
+      messagingSenderId: "735267785437",
+      appId: "1:735267785437:web:db7c4275659f328f46a934",
+      measurementId: "G-6LB717MSN1"
+    };
+    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
+    
+    // Make Firebase available globally
+    window.firebase = {
+      db,
+      storage,
+      auth,
+      collection,
+      addDoc,
+      query,
+      orderBy,
+      where,
+      onSnapshot,
+      serverTimestamp,
+      Timestamp,
+      ref,
+      uploadBytes,
+      getDownloadURL,
+      signInAnonymously
+    };
+  </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            background: #4F46E5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0 auto 1rem;
+        }
+
+        h1 {
+            color: #1F2937;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .subtitle {
+            color: #6B7280;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .status {
+            padding: 0.75rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .status.waiting {
+            background: #FEF3C7;
+            color: #D97706;
+            border: 1px solid #FBBF24;
+        }
+
+        .status.connecting {
+            background: #DBEAFE;
+            color: #1D4ED8;
+            border: 1px solid #3B82F6;
+        }
+
+        .status.connected {
+            background: #D1FAE5;
+            color: #059669;
+            border: 1px solid #10B981;
+        }
+
+        .status.error {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: 1px solid #EF4444;
+        }
+
+        .call-interface {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 1000;
+        }
+
+        .call-interface.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .call-header {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .call-info h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .call-duration {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .video-container {
+            flex: 1;
+            position: relative;
+            background: #1F2937;
+        }
+
+        .remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .local-video {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            border-radius: 10px;
+            border: 2px solid white;
+            object-fit: cover;
+        }
+
+        .call-controls {
+            background: rgba(0,0,0,0.8);
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn.mic {
+            background: #6B7280;
+        }
+
+        .control-btn.mic.muted {
+            background: #EF4444;
+        }
+
+        .control-btn.video {
+            background: #6B7280;
+        }
+
+        .control-btn.video.off {
+            background: #EF4444;
+        }
+
+        .control-btn.end {
+            background: #EF4444;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .patient-info {
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .patient-info h3 {
+            color: #1F2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .patient-info p {
+            color: #6B7280;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: #4F46E5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #4338CA;
+        }
+
+        .btn:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-width: 300px;
+        }
+
+        .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 4rem;
+            font-weight: bold;
+        }
+
+        /* Chat Panel Styles */
+        .chat-panel {
+            position: fixed;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100vh;
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s ease;
+            z-index: 1001;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-panel.active {
+            right: 0;
+        }
+
+        .chat-header {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h4 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.1rem;
+        }
+
+        .chat-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-close:hover {
+            color: #1f2937;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f9fafb;
+        }
+
+        .chat-placeholder {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.9rem;
+            padding: 2rem 0;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            max-width: 80%;
+        }
+
+        .message.own {
+            margin-left: auto;
+        }
+
+        .message-bubble {
+            padding: 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+        }
+
+        .message.own .message-bubble {
+            background: #3b82f6;
+            color: white;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .message.other .message-bubble {
+            background: #e5e7eb;
+            color: #1f2937;
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .message.own .message-time {
+            text-align: right;
+        }
+
+        .chat-input-area {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            background: white;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .chat-input-row input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .chat-input-row input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .chat-input-row button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .chat-input-row button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .chat-input-row button:not(:disabled):hover {
+            background: #2563eb;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-start;
+        }
+
+        .action-btn {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .action-btn.recording {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #dc2626;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .control-btn.chat {
+            background: #6B7280;
+        }
+
+        .control-btn.chat.active {
+            background: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="waitingRoom">
+        <div class="patient-avatar">
+            👤
+        </div>
+        <h1>Patient Portal</h1>
+        <p class="subtitle">Video Consultation Demo</p>
+        
+        <div class="patient-info">
+            <h3 id="patientName">Demo Patient</h3>
+            <p>Waiting for doctor to initiate call...</p>
+        </div>
+        
+        <div class="status waiting" id="connectionStatus">
+            Waiting for call from doctor
+        </div>
+        
+        <button class="btn" id="connectBtn" onclick="connectToServer()">
+            Connect to Server
+        </button>
+    </div>
+
+    <!-- Call Interface -->
+    <div class="call-interface" id="callInterface">
+        <div class="call-header">
+            <div class="call-info">
+                <h3>Dr. Smith</h3>
+                <div class="call-duration" id="callDuration">00:00</div>
+            </div>
+            <div class="call-status">
+                Connected
+            </div>
+        </div>
+        
+        <div class="video-container">
+            <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+            <video id="localVideo" class="local-video" autoplay playsinline muted></video>
+            
+            <!-- Video placeholder when no stream -->
+            <div id="videoPlaceholder" class="avatar-placeholder" style="display: none;">
+                👩‍⚕️
+            </div>
+        </div>
+        
+        <div className="call-controls">
+            <button className="control-btn mic" id="micBtn" onclick="toggleMic()">
+                🎤
+            </button>
+            <button className="control-btn video" id="videoBtn" onclick="toggleVideo()">
+                📹
+            </button>
+            <button className="control-btn chat" id="chatBtn" onclick="toggleChat()">
+                💬
+            </button>
+            <button className="control-btn end" onclick="endCall()">
+                📞
+            </button>
+        </div>
+        
+        <!-- Chat Panel -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header">
+                <h4>Chat with Doctor</h4>
+                <button onclick="toggleChat()" class="chat-close">×</button>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-placeholder">
+                    <p>Chat will appear here during the call</p>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <div class="chat-input-row">
+                    <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleMessageKeyPress(event)">
+                    <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
+                </div>
+                <div class="chat-actions">
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" onchange="sendFile(event)" style="display: none;">
+                    <button onclick="document.getElementById('fileInput').click()" class="action-btn" title="Attach file">📎</button>
+                    <button onclick="toggleVoiceRecording()" class="action-btn" id="voiceBtn" title="Voice message">🎤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="debug-info" id="debugInfo">
+        <div>Status: <span id="debugStatus">Disconnected</span></div>
+        <div>Socket: <span id="debugSocket">Not connected</span></div>
+        <div>Peer: <span id="debugPeer">Not initialized</span></div>
+        <div>Local Stream: <span id="debugLocalStream">None</span></div>
+        <div>Remote Stream: <span id="debugRemoteStream">None</span></div>
+    </div>
+
+    <script>
+        class PatientVideoCall {
+            constructor() {
+                this.socket = null;
+                this.peerConnection = null;
+                this.localStream = null;
+                this.remoteStream = null;
+                this.isConnected = false;
+                this.isMicOn = true;
+                this.isVideoOn = true;
+                this.callStartTime = null;
+                this.currentCallSessionId = null;
+                this.currentUserId = null;
+                this.chatUnsubscribe = null;
+                this.isChatOpen = false;
+                this.isRecordingVoice = false;
+                this.mediaRecorder = null;
+                this.voiceChunks = [];
+                
+                this.iceServers = [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ];
+
+                this.patientId = 'demo_patient_' + Math.random().toString(36).substr(2, 9);
+                this.updateDebugInfo();
+                this.initializeFirebase();
+            }
+
+            async initializeFirebase() {
+                try {
+                    // Wait for Firebase to be available
+                    while (!window.firebase) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    // Sign in anonymously
+                    await window.firebase.signInAnonymously(window.firebase.auth);
+                    this.currentUserId = window.firebase.auth.currentUser?.uid || this.patientId;
+                    console.log('🔥 Firebase initialized for patient:', this.currentUserId);
+                } catch (error) {
+                    console.error('Firebase initialization error:', error);
+                    // Fallback to WebRTC-only mode
+                }
+            }
+
+            updateDebugInfo() {
+                document.getElementById('debugStatus').textContent = this.isConnected ? 'Connected' : 'Disconnected';
+                document.getElementById('debugSocket').textContent = this.socket?.connected ? 'Connected' : 'Disconnected';
+                document.getElementById('debugPeer').textContent = this.peerConnection ? 'Initialized' : 'None';
+                document.getElementById('debugLocalStream').textContent = this.localStream ? 'Active' : 'None';
+                document.getElementById('debugRemoteStream').textContent = this.remoteStream ? 'Active' : 'None';
+            }
+
+            async connectToServer() {
+                try {
+                    this.updateStatus('Connecting to server...', 'connecting');
+                    
+                    this.socket = io('http://localhost:3001', {
+                        transports: ['websocket']
+                    });
+
+                    this.socket.on('connect', () => {
+                        console.log('📡 Connected to signaling server');
+                        this.isConnected = true; // Mark as connected when socket connects
+                        this.updateStatus('Connected - Waiting for call', 'waiting');
+                        this.updateDebugInfo();
+                        
+                        // Register as patient
+                        this.socket.emit('register', {
+                            id: this.patientId,
+                            name: 'Demo Patient',
+                            role: 'patient'
+                        });
+                    });
+
+                    this.socket.on('disconnect', () => {
+                        console.log('📡 Disconnected from server');
+                        this.isConnected = false; // Mark as disconnected when socket disconnects
+                        this.updateStatus('Disconnected from server', 'error');
+                        this.updateDebugInfo();
+                    });
+
+                    this.socket.on('call-request', async (data) => {
+                        console.log('📞 Incoming call from:', data.from);
+                        this.updateStatus('Incoming call from ' + data.from.name, 'connecting');
+                        
+                        // Auto-accept the call after a short delay
+                        setTimeout(async () => {
+                            await this.acceptCall(data);
+                        }, 2000);
+                    });
+
+                    this.socket.on('call-answer', async (data) => {
+                        console.log('✅ Call answered');
+                        if (this.peerConnection) {
+                            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        }
+                    });
+
+                    this.socket.on('ice-candidate', async (data) => {
+                        console.log('🧊 Received ICE candidate');
+                        if (this.peerConnection) {
+                            await this.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                        }
+                    });
+
+                    this.socket.on('call-ended', () => {
+                        console.log('📞 Call ended by doctor');
+                        this.endCall();
+                    });
+
+                    document.getElementById('connectBtn').textContent = 'Connecting...';
+                    document.getElementById('connectBtn').disabled = true;
+
+                } catch (error) {
+                    console.error('❌ Connection error:', error);
+                    this.updateStatus('Connection failed', 'error');
+                }
+            }
+
+            async acceptCall(callData) {
+                try {
+                    console.log('🎥 Accepting call...');
+                    console.log('📞 Call data:', callData);
+                    
+                    // Store call session ID for chat
+                    this.currentCallSessionId = callData.callSession?.id || 'demo_session_' + Date.now();
+                    
+                    // Show call interface immediately
+                    this.updateStatus('Setting up video call...', 'connecting');
+                    
+                    // Get user media
+                    console.log('🎥 Requesting camera and microphone...');
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true
+                    });
+                    console.log('✅ Got local media stream');
+
+                    document.getElementById('localVideo').srcObject = this.localStream;
+                    this.updateDebugInfo();
+
+                    // Start the call interface immediately
+                    document.getElementById('waitingRoom').style.display = 'none';
+                    document.getElementById('callInterface').classList.add('active');
+                    this.updateStatus('Connecting to doctor...', 'connecting');
+
+                    // Setup Firebase chat if available
+                    this.setupFirebaseChat();
+
+                    // Create peer connection
+                    console.log('🔗 Creating peer connection...');
+                    this.peerConnection = new RTCPeerConnection({
+                        iceServers: this.iceServers
+                    });
+
+                    // Add local stream
+                    console.log('🎥 Adding local stream to peer connection...');
+                    this.localStream.getTracks().forEach(track => {
+                        console.log('🎵 Adding track:', track.kind);
+                        this.peerConnection.addTrack(track, this.localStream);
+                    });
+
+                    // Handle remote stream
+                    this.peerConnection.ontrack = (event) => {
+                        console.log('🎥 Received remote stream');
+                        this.remoteStream = event.streams[0];
+                        document.getElementById('remoteVideo').srcObject = this.remoteStream;
+                        document.getElementById('videoPlaceholder').style.display = 'none';
+                        this.updateDebugInfo();
+                        
+                        // Start the call timer when we get remote stream
+                        if (!this.callStartTime) {
+                            this.startCall();
+                        }
+                    };
+
+                    // Handle ICE candidates
+                    this.peerConnection.onicecandidate = (event) => {
+                        if (event.candidate && this.socket) {
+                            console.log('🧊 Sending ICE candidate');
+                            this.socket.emit('ice-candidate', {
+                                candidate: event.candidate,
+                                callSessionId: callData.callSession.id
+                            });
+                        }
+                    };
+
+                    // Handle connection state changes
+                    this.peerConnection.onconnectionstatechange = () => {
+                        console.log('🔗 Connection state:', this.peerConnection.connectionState);
+                        this.updateStatus('Connection: ' + this.peerConnection.connectionState, 'connecting');
+                        
+                        if (this.peerConnection.connectionState === 'connected') {
+                            console.log('🎉 Peer connection established!');
+                            this.updateStatus('Connected to doctor', 'connected');
+                            if (!this.callStartTime) {
+                                this.startCall();
+                            }
+                        } else if (this.peerConnection.connectionState === 'failed') {
+                            console.error('❌ Peer connection failed');
+                            this.updateStatus('Connection failed', 'error');
+                        }
+                    };
+
+                    // Set remote description (offer)
+                    console.log('📞 Setting remote description (offer)...');
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                    console.log('✅ Remote description set');
+
+                    // Create answer
+                    console.log('📞 Creating answer...');
+                    const answer = await this.peerConnection.createAnswer();
+                    await this.peerConnection.setLocalDescription(answer);
+                    console.log('✅ Answer created and local description set');
+
+                    // Send answer back
+                    console.log('📞 Sending answer back to doctor...');
+                    this.socket.emit('call-answer', {
+                        answer: answer,
+                        callSessionId: callData.callSession.id
+                    });
+                    console.log('✅ Answer sent');
+
+                    this.updateDebugInfo();
+                    
+                    // Start call timer after a short delay if peer connection doesn't trigger it
+                    setTimeout(() => {
+                        if (!this.callStartTime) {
+                            console.log('🕰 Starting call timer as fallback...');
+                            this.startCall();
+                        }
+                    }, 3000);
+
+                } catch (error) {
+                    console.error('❌ Error accepting call:', error);
+                    this.updateStatus('Failed to accept call: ' + error.message, 'error');
+                }
+            }
+
+            startCall() {
+                console.log('🎉 Call started successfully');
+                this.isConnected = true;
+                this.callStartTime = new Date();
+                
+                document.getElementById('waitingRoom').style.display = 'none';
+                document.getElementById('callInterface').classList.add('active');
+                
+                this.updateStatus('In call with doctor', 'connected');
+                this.startCallTimer();
+                this.updateDebugInfo();
+            }
+
+            startCallTimer() {
+                setInterval(() => {
+                    if (this.callStartTime) {
+                        const elapsed = Math.floor((new Date() - this.callStartTime) / 1000);
+                        const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                        const seconds = (elapsed % 60).toString().padStart(2, '0');
+                        document.getElementById('callDuration').textContent = `${minutes}:${seconds}`;
+                    }
+                }, 1000);
+            }
+
+            toggleMic() {
+                if (this.localStream) {
+                    const audioTrack = this.localStream.getAudioTracks()[0];
+                    if (audioTrack) {
+                        audioTrack.enabled = !audioTrack.enabled;
+                        this.isMicOn = audioTrack.enabled;
+                        
+                        const micBtn = document.getElementById('micBtn');
+                        if (this.isMicOn) {
+                            micBtn.classList.remove('muted');
+                            micBtn.textContent = '🎤';
+                        } else {
+                            micBtn.classList.add('muted');
+                            micBtn.textContent = '🎤';
+                        }
+                    }
+                }
+            }
+
+            toggleVideo() {
+                if (this.localStream) {
+                    const videoTrack = this.localStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        videoTrack.enabled = !videoTrack.enabled;
+                        this.isVideoOn = videoTrack.enabled;
+                        
+                        const videoBtn = document.getElementById('videoBtn');
+                        if (this.isVideoOn) {
+                            videoBtn.classList.remove('off');
+                            videoBtn.textContent = '📹';
+                        } else {
+                            videoBtn.classList.add('off');
+                            videoBtn.textContent = '📹';
+                        }
+                    }
+                }
+            }
+
+            endCall() {
+                console.log('📞 Ending call');
+                
+                if (this.peerConnection) {
+                    this.peerConnection.close();
+                    this.peerConnection = null;
+                }
+
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                    this.localStream = null;
+                }
+
+                this.remoteStream = null;
+                // Keep isConnected true if socket is still connected
+                // Only set to false if socket is actually disconnected
+                this.callStartTime = null;
+
+                document.getElementById('callInterface').classList.remove('active');
+                document.getElementById('waitingRoom').style.display = 'flex';
+                
+                this.updateStatus('Call ended', 'waiting');
+                this.updateDebugInfo();
+
+                // Reconnect for next call
+                setTimeout(() => {
+                    this.updateStatus('Ready for next call', 'waiting');
+                }, 2000);
+            }
+
+            updateStatus(message, type) {
+                const statusEl = document.getElementById('connectionStatus');
+                statusEl.textContent = message;
+                statusEl.className = `status ${type}`;
+            }
+
+            // Firebase Chat Methods
+            setupFirebaseChat() {
+                if (!window.firebase || !this.currentCallSessionId) return;
+                
+                console.log('💬 Setting up Firebase chat for session:', this.currentCallSessionId);
+                
+                // Listen to chat messages
+                const messagesRef = window.firebase.collection(window.firebase.db, 'chat_messages');
+                const q = window.firebase.query(
+                    messagesRef,
+                    window.firebase.where('callSessionId', '==', this.currentCallSessionId),
+                    window.firebase.orderBy('timestamp', 'asc')
+                );
+                
+                this.chatUnsubscribe = window.firebase.onSnapshot(q, (snapshot) => {
+                    this.renderChatMessages(snapshot);
+                });
+            }
+
+            renderChatMessages(snapshot) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const placeholder = messagesContainer.querySelector('.chat-placeholder');
+                
+                if (snapshot.empty) {
+                    if (placeholder) placeholder.style.display = 'block';
+                    return;
+                }
+                
+                if (placeholder) placeholder.style.display = 'none';
+                
+                // Clear existing messages
+                messagesContainer.innerHTML = '';
+                
+                snapshot.forEach((doc) => {
+                    const message = { id: doc.id, ...doc.data() };
+                    this.addMessageToUI(message);
+                });
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            addMessageToUI(message) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                const isOwnMessage = message.senderId === this.currentUserId;
+                const messageTime = message.timestamp?.toDate?.() || new Date(message.timestamp);
+                
+                messageDiv.className = `message ${isOwnMessage ? 'own' : 'other'}`;
+                
+                let messageContent = '';
+                
+                if (message.type === 'system') {
+                    messageDiv.innerHTML = `
+                        <div class="message-bubble" style="background: #fef3c7; color: #92400e; text-align: center; font-style: italic;">
+                            ${message.message}
+                        </div>
+                    `;
+                } else {
+                    if (message.type === 'text') {
+                        messageContent = `<div>${message.message}</div>`;
+                    } else if (message.type === 'image') {
+                        messageContent = `
+                            ${message.message ? `<div class="mb-2">${message.message}</div>` : ''}
+                            <img src="${message.fileUrl}" alt="${message.fileName}" 
+                                 class="max-w-full h-auto rounded cursor-pointer" 
+                                 onclick="window.open('${message.fileUrl}', '_blank')" 
+                                 style="max-width: 200px; border-radius: 8px;">
+                        `;
+                    } else if (message.type === 'file') {
+                        const fileSize = this.formatFileSize(message.fileSize || 0);
+                        messageContent = `
+                            ${message.message ? `<div class="mb-2">${message.message}</div>` : ''}
+                            <div class="file-attachment" style="background: #f3f4f6; padding: 8px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.2em;">📎</span>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 0.9em; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${message.fileName}</div>
+                                    <div style="font-size: 0.75em; color: #6b7280;">${fileSize}</div>
+                                </div>
+                                <button onclick="window.open('${message.fileUrl}', '_blank')" style="background: none; border: none; cursor: pointer; font-size: 1.1em;">⬇</button>
+                            </div>
+                        `;
+                    } else if (message.type === 'voice') {
+                        const duration = this.formatVoiceDuration(message.voiceDuration || 0);
+                        messageContent = `
+                            <div class="voice-message" style="background: #f3f4f6; padding: 8px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                                <button onclick="this.playVoiceMessage('${message.fileUrl}')" style="background: #3b82f6; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">▶</button>
+                                <div style="flex: 1; height: 4px; background: #d1d5db; border-radius: 2px;">
+                                    <div style="width: 0%; height: 100%; background: #3b82f6; border-radius: 2px;"></div>
+                                </div>
+                                <span style="font-size: 0.75em; color: #6b7280;">${duration}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-bubble">
+                            ${messageContent}
+                        </div>
+                        <div class="message-time">
+                            ${messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                    `;
+                }
+                
+                messagesContainer.appendChild(messageDiv);
+            }
+
+            async sendChatMessage(text) {
+                if (!window.firebase || !this.currentCallSessionId || !text.trim()) return;
+                
+                try {
+                    const messageData = {
+                        callSessionId: this.currentCallSessionId,
+                        senderId: this.currentUserId,
+                        senderName: 'Patient',
+                        senderRole: 'patient',
+                        message: text.trim(),
+                        type: 'text',
+                        timestamp: window.firebase.serverTimestamp(),
+                        status: 'sent'
+                    };
+                    
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'chat_messages'),
+                        messageData
+                    );
+                    
+                    console.log('💬 Message sent successfully');
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    alert('Failed to send message. Please try again.');
+                }
+            }
+
+            async sendFileMessage(file) {
+                if (!window.firebase || !this.currentCallSessionId || !file) return;
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('File size must be less than 10MB');
+                    return;
+                }
+                
+                try {
+                    // Upload file
+                    const fileName = `${Date.now()}_${file.name}`;
+                    const fileRef = window.firebase.ref(
+                        window.firebase.storage, 
+                        `chat_files/${this.currentCallSessionId}/${fileName}`
+                    );
+                    
+                    const uploadResult = await window.firebase.uploadBytes(fileRef, file);
+                    const fileUrl = await window.firebase.getDownloadURL(uploadResult.ref);
+                    
+                    const messageType = file.type.startsWith('image/') ? 'image' : 'file';
+                    
+                    const messageData = {
+                        callSessionId: this.currentCallSessionId,
+                        senderId: this.currentUserId,
+                        senderName: 'Patient',
+                        senderRole: 'patient',
+                        type: messageType,
+                        timestamp: window.firebase.serverTimestamp(),
+                        status: 'sent',
+                        fileUrl,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        fileMimeType: file.type
+                    };
+                    
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'chat_messages'),
+                        messageData
+                    );
+                    
+                    console.log('📎 File sent successfully');
+                } catch (error) {
+                    console.error('Error sending file:', error);
+                    alert('Failed to send file. Please try again.');
+                }
+            }
+
+            async startVoiceRecording() {
+                if (!navigator.mediaDevices || this.isRecordingVoice) return;
+                
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                    this.voiceChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.voiceChunks.push(event.data);
+                        }
+                    };
+                    
+                    this.mediaRecorder.onstop = async () => {
+                        const voiceBlob = new Blob(this.voiceChunks, { type: 'audio/webm;codecs=opus' });
+                        await this.sendVoiceMessage(voiceBlob);
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    this.mediaRecorder.start();
+                    this.isRecordingVoice = true;
+                    
+                    // Update UI
+                    const voiceBtn = document.getElementById('voiceBtn');
+                    if (voiceBtn) {
+                        voiceBtn.classList.add('recording');
+                        voiceBtn.textContent = '⏹';
+                    }
+                    
+                } catch (error) {
+                    console.error('Error starting voice recording:', error);
+                    alert('Could not start voice recording. Please check microphone permissions.');
+                }
+            }
+
+            stopVoiceRecording() {
+                if (this.mediaRecorder && this.isRecordingVoice) {
+                    this.mediaRecorder.stop();
+                    this.isRecordingVoice = false;
+                    
+                    // Update UI
+                    const voiceBtn = document.getElementById('voiceBtn');
+                    if (voiceBtn) {
+                        voiceBtn.classList.remove('recording');
+                        voiceBtn.textContent = '🎤';
+                    }
+                }
+            }
+
+            async sendVoiceMessage(voiceBlob) {
+                if (!window.firebase || !this.currentCallSessionId) return;
+                
+                try {
+                    const fileName = `voice_${Date.now()}.webm`;
+                    const voiceRef = window.firebase.ref(
+                        window.firebase.storage,
+                        `voice_messages/${this.currentCallSessionId}/${fileName}`
+                    );
+                    
+                    const uploadResult = await window.firebase.uploadBytes(voiceRef, voiceBlob);
+                    const voiceUrl = await window.firebase.getDownloadURL(uploadResult.ref);
+                    
+                    const messageData = {
+                        callSessionId: this.currentCallSessionId,
+                        senderId: this.currentUserId,
+                        senderName: 'Patient',
+                        senderRole: 'patient',
+                        type: 'voice',
+                        timestamp: window.firebase.serverTimestamp(),
+                        status: 'sent',
+                        fileUrl: voiceUrl,
+                        fileName,
+                        fileSize: voiceBlob.size,
+                        fileMimeType: voiceBlob.type,
+                        voiceDuration: 0 // Would need to calculate actual duration
+                    };
+                    
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'chat_messages'),
+                        messageData
+                    );
+                    
+                    console.log('🎤 Voice message sent successfully');
+                } catch (error) {
+                    console.error('Error sending voice message:', error);
+                    alert('Failed to send voice message. Please try again.');
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            formatVoiceDuration(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // Global functions for buttons
+        let patientCall;
+
+        function connectToServer() {
+            if (!patientCall) {
+                patientCall = new PatientVideoCall();
+            }
+            patientCall.connectToServer();
+        }
+
+        function toggleMic() {
+            patientCall?.toggleMic();
+        }
+
+        function toggleVideo() {
+            patientCall?.toggleVideo();
+        }
+
+        function endCall() {
+            patientCall?.endCall();
+        }
+
+        // Chat functions
+        function toggleChat() {
+            const chatPanel = document.getElementById('chatPanel');
+            const chatBtn = document.getElementById('chatBtn');
+            
+            if (chatPanel && chatBtn) {
+                const isActive = chatPanel.classList.contains('active');
+                
+                if (isActive) {
+                    chatPanel.classList.remove('active');
+                    chatBtn.classList.remove('active');
+                    patientCall.isChatOpen = false;
+                } else {
+                    chatPanel.classList.add('active');
+                    chatBtn.classList.add('active');
+                    patientCall.isChatOpen = true;
+                }
+            }
+        }
+
+        function handleMessageKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+            
+            // Enable/disable send button
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            if (input && sendBtn) {
+                sendBtn.disabled = !input.value.trim();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            if (input && input.value.trim()) {
+                patientCall?.sendChatMessage(input.value.trim());
+                input.value = '';
+                if (sendBtn) sendBtn.disabled = true;
+            }
+        }
+
+        function sendFile(event) {
+            const file = event.target.files?.[0];
+            if (file) {
+                patientCall?.sendFileMessage(file);
+                event.target.value = ''; // Clear file input
+            }
+        }
+
+        function toggleVoiceRecording() {
+            if (patientCall?.isRecordingVoice) {
+                patientCall.stopVoiceRecording();
+            } else {
+                patientCall?.startVoiceRecording();
+            }
+        }
+
+        // Enable send button when typing
+        document.addEventListener('DOMContentLoaded', () => {
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            if (messageInput && sendBtn) {
+                messageInput.addEventListener('input', () => {
+                    sendBtn.disabled = !messageInput.value.trim();
+                });
+            }
+        });
+
+        // Auto-connect when page loads
+        window.addEventListener('load', () => {
+            console.log('🏥 Patient Video Call Demo Ready');
+            // Auto-connect for demo purposes
+            setTimeout(connectToServer, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Firestore Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Simple Firestore Connection Test</h1>
+    <div id="status">Testing connection...</div>
+    <button onclick="testFirestore()">Test Firestore</button>
+    <button onclick="testStorage()">Test Storage</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    
+    <h3>Logs:</h3>
+    <div id="logs"></div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4cHeV25PvdgAgKttpoq3iBMMrtREH9iM",
+            authDomain: "medibot-b2bf7.firebaseapp.com",
+            projectId: "medibot-b2bf7",
+            storageBucket: "medibot-b2bf7.firebasestorage.app",
+            messagingSenderId: "735267785437",
+            appId: "1:735267785437:web:db7c4275659f328f46a934",
+            measurementId: "G-6LB717MSN1"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<pre>[${timestamp}] ${message}</pre>`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        async function testFirestore() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                statusDiv.innerHTML = '<div class="status warning">Testing Firestore without authentication...</div>';
+                log('🔥 Testing Firestore connection...');
+
+                // Test write to test collection
+                const testData = {
+                    message: 'Hello Firestore!',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    testId: Math.random().toString(36).substr(2, 9)
+                };
+
+                log('📝 Writing test document...');
+                const docRef = await db.collection('test').add(testData);
+                log(`✅ Document written with ID: ${docRef.id}`);
+
+                // Test read from test collection
+                log('📖 Reading test documents...');
+                const snapshot = await db.collection('test').limit(5).get();
+                log(`📚 Found ${snapshot.size} documents`);
+
+                // Test chat_messages collection
+                log('💬 Testing chat_messages collection...');
+                const chatData = {
+                    callSessionId: 'test_session',
+                    senderId: 'test_user',
+                    senderName: 'Test User',
+                    senderRole: 'doctor',
+                    message: 'Test message without authentication',
+                    type: 'text',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'sent'
+                };
+
+                const chatRef = await db.collection('chat_messages').add(chatData);
+                log(`✅ Chat message created with ID: ${chatRef.id}`);
+
+                statusDiv.innerHTML = '<div class="status success">✅ Firestore test successful!</div>';
+                log('🎉 All Firestore tests passed!');
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Firestore test failed: ${error.message}</div>`;
+                log(`❌ Firestore error: ${error.message}`);
+                console.error('Firestore test error:', error);
+            }
+        }
+
+        async function testStorage() {
+            try {
+                log('📁 Testing Firebase Storage...');
+                
+                // Create a small test file
+                const testContent = 'Hello Firebase Storage!';
+                const testBlob = new Blob([testContent], { type: 'text/plain' });
+                
+                // Upload to storage
+                const storageRef = storage.ref(`test/test_file_${Date.now()}.txt`);
+                log('⬆️ Uploading test file...');
+                
+                const uploadTask = await storageRef.put(testBlob);
+                log('✅ File uploaded successfully');
+                
+                // Get download URL
+                const downloadURL = await uploadTask.ref.getDownloadURL();
+                log(`🔗 Download URL: ${downloadURL}`);
+                
+                log('🎉 Storage test passed!');
+                
+            } catch (error) {
+                log(`❌ Storage error: ${error.message}`);
+                console.error('Storage test error:', error);
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Auto-run test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testFirestore, 1000);
+        });
+    </script>
+</body>
+</html>
