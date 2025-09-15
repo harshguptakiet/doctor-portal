@@ -211,7 +211,7 @@ const VerificationPending: React.FC = () => {
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
             <a
-              href="mailto:verification@medibot.com"
+              href="mailto:verification@garudx.com"
               className="flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Mail className="h-5 w-5 mr-2" />
@@ -219,7 +219,7 @@ const VerificationPending: React.FC = () => {
             </a>
             
             <a
-              href="tel:+1-800-MEDIBOT"
+              href="tel:+1-800-GARUDX"
               className="flex items-center text-blue-600 border border-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors"
             >
               <Phone className="h-5 w-5 mr-2" />

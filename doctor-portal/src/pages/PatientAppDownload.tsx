@@ -85,7 +85,7 @@ const PatientAppDownload: React.FC = () => {
               <div className="bg-green-600 p-2 rounded-lg mr-3">
                 <Heart className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900">MediBot Patient App</h1>
+              <h1 className="text-xl font-bold text-gray-900">GarudX Patient App</h1>
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@ const PatientAppDownload: React.FC = () => {
           </div>
           
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Download the MediBot <span className="text-green-600">Patient App</span>
+            Download the GarudX <span className="text-green-600">Patient App</span>
           </h1>
           
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
@@ -173,7 +173,7 @@ const PatientAppDownload: React.FC = () => {
         <div className="mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose MediBot Patient App?
+              Why Choose GarudX Patient App?
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Experience healthcare like never before with our comprehensive mobile application
@@ -210,7 +210,7 @@ const PatientAppDownload: React.FC = () => {
               How It Works
             </h2>
             <p className="text-lg text-gray-600">
-              Get started with MediBot in three simple steps
+              Get started with GarudX in three simple steps
             </p>
           </div>
 
@@ -260,7 +260,7 @@ const PatientAppDownload: React.FC = () => {
               What Our Patients Say
             </h2>
             <p className="text-lg text-gray-600">
-              Join thousands of satisfied patients who trust MediBot
+              Join thousands of satisfied patients who trust GarudX
             </p>
           </div>
 

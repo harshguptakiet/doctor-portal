@@ -26,6 +26,7 @@ import {
   Shield,
   Stethoscope,
   Star,
+  FileText,
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -41,10 +42,13 @@ import {
 import { Bar, Line } from 'react-chartjs-2';
 import PatientManager from './PatientManager';
 import type { Patient } from './PatientTable';
-import WebRTCCallManager from './WebRTCCallManager';
+// import WebRTCCallManager from './WebRTCCallManager'; // Disabled to use integrated EHR system
 import { logout, onAuthStateChange } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import type { Doctor } from '../types/auth';
+import EHRForm from './EHRForm';
+import EHRViewer from './EHRViewer';
+import WebRTCVideoCall from './WebRTCVideoCall';
 
 ChartJS.register(
   CategoryScale,
@@ -67,9 +71,11 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   query,
   orderBy,
+  limit,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -172,6 +178,7 @@ const DoctorDashboard: React.FC = () => {
   } | null>(null);
   const [callTimer, setCallTimer] = useState('00:00');
   const [activeTab, setActiveTab] = useState<'ehr' | 'chat' | 'notes'>('ehr');
+  const [showEHRHistory, setShowEHRHistory] = useState(false);
   const [chatMessages, setChatMessages] = useState<Array<{
     id: string;
     sender: 'doctor' | 'patient';
@@ -296,7 +303,7 @@ const DoctorDashboard: React.FC = () => {
       const appointmentsData: Appointment[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        appointmentsData.push({
+        const appointment = {
           id: doc.id,
           patientId: data.patientId || '',
           scheduledFor: data.scheduledFor?.toDate?.()?.toISOString() || data.scheduledFor || '',
@@ -304,8 +311,18 @@ const DoctorDashboard: React.FC = () => {
           reason: data.reason || '',
           followUpTime: data.followUpTime?.toDate?.()?.toISOString() || data.followUpTime || '',
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || '',
-        });
+        };
+        appointmentsData.push(appointment);
       });
+      
+      // Debug appointment statuses
+      const statusCount = appointmentsData.reduce((acc, appt) => {
+        acc[appt.status] = (acc[appt.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('📊 Appointment status distribution:', statusCount);
+      console.log(`📅 Total appointments loaded: ${appointmentsData.length}`);
+      
       setQueueAppointments(appointmentsData);
       setAppointments(appointmentsData);
     }, (error) => {
@@ -313,8 +330,12 @@ const DoctorDashboard: React.FC = () => {
       setError('Failed to load appointments data');
     });
 
-    // Real-time chat messages listener
-    const chatQuery = query(collection(db, 'chatMessages'), orderBy('timestamp'));
+    // Real-time chat messages listener - only for active call sessions
+    const chatQuery = query(
+      collection(db, 'chatMessages'), 
+      orderBy('timestamp'),
+      limit(50) // Limit to last 50 messages to avoid loading too much data
+    );
     const unsubscribeChat = onSnapshot(chatQuery, (querySnapshot: QuerySnapshot<DocumentData>) => {
       const messagesData: typeof chatMessages = [];
       querySnapshot.forEach((doc) => {
@@ -500,7 +521,7 @@ const DoctorDashboard: React.FC = () => {
             sampleAppointments.push({
               patientId: patientIds[i],
               scheduledFor: generateTimeSlot(day, hour, i * 15), // 15 min intervals
-              status: day === 0 && i < 2 ? 'completed' : 'scheduled', // Only mark some as completed, rest as scheduled
+              status: 'scheduled', // All appointments start as scheduled
               reason: appointmentReasons[i % appointmentReasons.length],
               createdAt: serverTimestamp(),
             });
@@ -513,43 +534,12 @@ const DoctorDashboard: React.FC = () => {
         await addDoc(collection(db, 'appointments'), appointment);
       }
 
-      // Add some sample chat messages
-      const sampleChatMessages = [
-        {
-          appointmentId: 'demo-appointment-1',
-          sender: 'doctor' as const,
-          message: 'Hello! How are you feeling today?',
-          timestamp: serverTimestamp(),
-          type: 'text' as const,
-        },
-        {
-          appointmentId: 'demo-appointment-1',
-          sender: 'patient' as const,
-          message: 'I am feeling much better, thank you doctor.',
-          timestamp: serverTimestamp(),
-          type: 'text' as const,
-        },
-        {
-          appointmentId: 'demo-appointment-1',
-          sender: 'doctor' as const,
-          message: 'That\'s great to hear! Let\'s review your latest test results.',
-          timestamp: serverTimestamp(),
-          type: 'text' as const,
-        }
-      ];
-
-      // Add chat messages to Firebase
-      console.log(`💬 Adding ${sampleChatMessages.length} sample chat messages...`);
-      for (const message of sampleChatMessages) {
-        await addDoc(collection(db, 'chatMessages'), message);
-      }
-      console.log('✅ Sample chat messages added successfully!');
+      // Skip adding sample chat messages to reduce clutter
 
       console.log('🎉 Sample data initialization completed successfully!');
       console.log('📊 Summary:');
       console.log(`   - ${samplePatients.length} patients added`);
       console.log(`   - Multiple appointments created`);
-      console.log(`   - ${sampleChatMessages.length} chat messages added`);
       console.log('🔍 Check your Firebase Console to see the data!');
       
       setLoading(false);
@@ -579,42 +569,6 @@ const DoctorDashboard: React.FC = () => {
     }
   };
 
-  // Simple Firebase connection test
-  const testFirebaseConnection = async () => {
-    console.log('🔍 Testing Firebase connection...');
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { db } = ensureFirebase();
-      console.log('✅ Firebase initialized');
-      
-      // Try to read from a collection (this will create it if it doesn't exist)
-      const testCollection = collection(db, 'connection-test');
-      console.log('✅ Collection reference created');
-      
-      // Try to add a test document
-      const testDoc = await addDoc(testCollection, {
-        test: true,
-        timestamp: serverTimestamp(),
-        message: 'Connection test successful'
-      });
-      console.log('✅ Test document added with ID:', testDoc.id);
-      
-      // Try to delete the test document
-      await deleteDoc(doc(db, 'connection-test', testDoc.id));
-      console.log('✅ Test document deleted');
-      
-      console.log('🎉 Firebase connection test completed successfully!');
-      alert('✅ Firebase connection test successful! Check the console for details.');
-      
-    } catch (error: any) {
-      console.error('❌ Firebase connection test failed:', error);
-      setError(`Connection test failed: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
   const updateAppointmentInFirebase = async (appointmentId: string, updates: Partial<Appointment>) => {
@@ -641,6 +595,41 @@ const DoctorDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error deleting appointment:', error);
       setError('Failed to delete appointment');
+    }
+  };
+
+  // Clear all existing data and reinitialize with correct statuses
+  const clearAndReinitializeData = async () => {
+    const confirmed = window.confirm('This will clear all existing data and create fresh appointments. Continue?');
+    if (!confirmed) return;
+    
+    try {
+      setLoading(true);
+      const { db } = ensureFirebase();
+      
+      // Clear existing appointments
+      console.log('🧹 Clearing existing appointments...');
+      const appointmentsSnapshot = await getDocs(collection(db, 'appointments'));
+      for (const docSnapshot of appointmentsSnapshot.docs) {
+        await deleteDoc(doc(db, 'appointments', docSnapshot.id));
+      }
+      
+      // Clear existing patients
+      console.log('🧹 Clearing existing patients...');
+      const patientsSnapshot = await getDocs(collection(db, 'patients'));
+      for (const docSnapshot of patientsSnapshot.docs) {
+        await deleteDoc(doc(db, 'patients', docSnapshot.id));
+      }
+      
+      console.log('✅ Data cleared successfully. Reinitializing...');
+      
+      // Reinitialize with fresh data
+      await initializeSampleData();
+      
+    } catch (error) {
+      console.error('❌ Error clearing data:', error);
+      setError('Failed to clear data');
+      setLoading(false);
     }
   };
 
@@ -1037,19 +1026,6 @@ const DoctorDashboard: React.FC = () => {
             {loading && <span className="text-orange-600 ml-2">Loading...</span>}
           </div>
           
-          {/* Test Connection Button */}
-          <button
-            onClick={testFirebaseConnection}
-            disabled={loading}
-            className={`inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-              loading 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-            title="Test Firebase connection"
-          >
-            🔍 Test Connection
-          </button>
           
           {/* Always show the button for testing, but change text based on state */}
           <button
@@ -1248,29 +1224,24 @@ const DoctorDashboard: React.FC = () => {
           return;
         }
 
-        // Use WebRTC calling system
-        const manager = (window as any).webrtcCallManager;
-        if (manager && typeof manager.initiateCall === 'function') {
+        // Start WebRTC video call
+        const patientName = `${patientData.firstName} ${patientData.lastName}`;
+        const confirmed = window.confirm(`Start video call with ${patientName}?`);
+        if (confirmed) {
+          // Update appointment to in-queue status
           try {
-            await manager.initiateCall(patientData, nextPatient.id);
-            console.log('📞 WebRTC call initiated for next patient');
+            await updateAppointmentInFirebase(nextPatient.id, { status: 'in-queue' });
           } catch (error) {
-            console.error('❌ Error initiating WebRTC call:', error);
-            alert('Failed to start video call. Please check your camera and microphone permissions.');
+            console.error('❌ Error updating appointment to in-queue:', error);
           }
-        } else {
-          // Fallback to old system if WebRTC not available
-          const patientName = `${patientData.firstName} ${patientData.lastName}`;
-          const confirmed = window.confirm(`WebRTC not available. Use audio-only call for ${patientName}?`);
-          if (confirmed) {
-            setActiveCall({
-              patientId: patientData.id,
-              patientName,
-              patientPhone: patientData.phone || '',
-              appointmentId: nextPatient.id,
-              startTime: new Date()
-            });
-          }
+          
+          setActiveCall({
+            patientId: patientData.id,
+            patientName,
+            patientPhone: patientData.phone || '',
+            appointmentId: nextPatient.id,
+            startTime: new Date()
+          });
         }
       }
     };
@@ -1284,32 +1255,29 @@ const DoctorDashboard: React.FC = () => {
         return;
       }
 
-      // Use WebRTC calling system
-      const manager = (window as any).webrtcCallManager;
-      if (manager && typeof manager.initiateCall === 'function') {
-        try {
-          await manager.initiateCall(patient, appointmentId);
-          console.log('📞 WebRTC call initiated for patient:', patientName);
-        } catch (error) {
-          console.error('❌ Error initiating WebRTC call:', error);
-          alert('Failed to start video call. Please check your camera and microphone permissions.');
+      // Use the integrated EHR call system (fallback from WebRTC)
+      if (patientPhone) {
+        const confirmed = window.confirm(`Start video call with ${patientName}?`);
+        if (confirmed) {
+          // Update appointment to in-queue status if it exists
+          if (appointmentId) {
+            try {
+              await updateAppointmentInFirebase(appointmentId, { status: 'in-queue' });
+            } catch (error) {
+              console.error('❌ Error updating appointment to in-queue:', error);
+            }
+          }
+          
+          setActiveCall({
+            patientId: patient.id,
+            patientName,
+            patientPhone,
+            appointmentId,
+            startTime: new Date()
+          });
         }
       } else {
-        // Fallback to old system if WebRTC not available
-        if (patientPhone) {
-          const confirmed = window.confirm(`WebRTC not available. Use audio-only call for ${patientName}?`);
-          if (confirmed) {
-            setActiveCall({
-              patientId: patient.id,
-              patientName,
-              patientPhone,
-              appointmentId,
-              startTime: new Date()
-            });
-          }
-        } else {
-          alert('No phone number available for this patient.');
-        }
+        alert('No phone number available for this patient.');
       }
     };
 
@@ -1457,6 +1425,15 @@ const DoctorDashboard: React.FC = () => {
                       <span className="text-sm font-medium text-gray-700">
                         {activeCall.appointmentId ? 'Scheduled Appointment' : 'Manual Call'}
                       </span>
+                      {(() => {
+                        const scheduledCount = sortedAppointments.filter(appt => appt.status === 'scheduled').length;
+                        const completedToday = sortedAppointments.filter(appt => appt.status === 'completed').length;
+                        return (
+                          <div className="mt-1 text-xs text-gray-500">
+                            Queue: {scheduledCount} waiting • {completedToday} completed today
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1484,6 +1461,21 @@ const DoctorDashboard: React.FC = () => {
                         // End the call
                         setActiveCall(null);
                         setCallTimer('00:00');
+                        
+                        // Show success message and offer to call next patient
+                        setTimeout(() => {
+                          const hasNextPatient = sortedAppointments.some(appt => appt.status === 'scheduled');
+                          if (hasNextPatient) {
+                            const callNext = window.confirm(
+                              `✅ Consultation completed successfully!\n\nWould you like to call the next patient in queue?`
+                            );
+                            if (callNext) {
+                              handleCallNext();
+                            }
+                          } else {
+                            alert('✅ Consultation completed! No more patients in queue.');
+                          }
+                        }, 500);
                       }
                     }}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition flex items-center gap-2 font-medium"
@@ -1503,16 +1495,70 @@ const DoctorDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Call Next Patient Button - Only show when no active call */}
-        {!activeCall && sortedAppointments.some(appt => appt.status === 'scheduled') && (
+        {/* Call Next Patient Button - Enhanced queue management */}
+        {!activeCall && (
           <div className="mb-6">
-            <button 
-              onClick={handleCallNext}
-              className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
-            >
-              <UserCheck className="w-5 h-5" />
-              <span>Call Next Patient</span>
-            </button>
+            {(() => {
+              const scheduledPatients = sortedAppointments.filter(appt => appt.status === 'scheduled');
+              const completedToday = sortedAppointments.filter(appt => appt.status === 'completed').length;
+              const nextPatient = scheduledPatients[0];
+              
+              if (scheduledPatients.length === 0) {
+                return (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                    <UserCheck className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">Queue Complete</h3>
+                    <p className="text-sm text-gray-500">
+                      ✅ {completedToday} consultation{completedToday !== 1 ? 's' : ''} completed today. No more patients in queue.
+                    </p>
+                  </div>
+                );
+              }
+              
+              const nextPatientData = nextPatient ? patientMap[nextPatient.patientId] : null;
+              
+              return (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
+                          {nextPatientData ? nextPatientData.firstName.charAt(0) + nextPatientData.lastName.charAt(0) : 'NP'}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Next: {nextPatientData ? `${nextPatientData.firstName} ${nextPatientData.lastName}` : 'Unknown Patient'}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Clock className="w-4 h-4" />
+                            <span>{nextPatient ? formatTime(nextPatient.scheduledFor) : 'No time set'}</span>
+                            {completedToday > 0 && (
+                              <>
+                                <span className="mx-2">•</span>
+                                <span className="text-green-600 font-medium">{completedToday} completed today</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {nextPatient?.reason || 'General consultation'}
+                        {scheduledPatients.length > 1 && (
+                          <span className="ml-2 text-gray-500">• +{scheduledPatients.length - 1} more waiting</span>
+                        )}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={handleCallNext}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2 shadow-sm"
+                    >
+                      <Phone className="w-5 h-5" />
+                      <span>Start Call</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
         
@@ -1622,14 +1668,21 @@ const DoctorDashboard: React.FC = () => {
                           </button>
                         )}
                         {/* Follow-up button for completed appointments */}
-                          {appt.status === 'completed' && (
-                          <button
-                            onClick={() => handleSetFollowUp(appt.id)}
-                            className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition"
-                            title={appt.followUpTime ? "Update follow-up time" : "Set follow-up time"}
-                          >
-                            <Clock size={16} />
-                          </button>
+                        {appt.status === 'completed' && (
+                          <>
+                            <button
+                              onClick={() => handleSetFollowUp(appt.id)}
+                              className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition"
+                              title={appt.followUpTime ? "Update follow-up time" : "Set follow-up time"}
+                            >
+                              <Clock size={16} />
+                            </button>
+                            {/* Add a special completed indicator */}
+                            <div className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium flex items-center gap-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              Completed
+                            </div>
+                          </>
                         )}
                         <button
                           onClick={() => startEditAppointment(appt)}
@@ -1759,6 +1812,8 @@ const DoctorDashboard: React.FC = () => {
         <h1 className="text-2xl font-semibold tracking-tight text-gray-800">Settings</h1>
         <p className="text-sm text-gray-500 mt-1">System configuration and preferences.</p>
       </div>
+      
+      {/* Application Settings */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <h2 className="text-lg font-medium text-gray-800 mb-4">Application Settings</h2>
         <div className="space-y-4">
@@ -1784,6 +1839,47 @@ const DoctorDashboard: React.FC = () => {
                 <span className="ml-2 text-sm text-gray-700">New patient alerts</span>
               </label>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Data Management */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <h2 className="text-lg font-medium text-gray-800 mb-4">Data Management</h2>
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-yellow-800 mb-2">
+              🖾 Reset Sample Data
+            </h3>
+            <p className="text-sm text-yellow-700 mb-3">
+              If the queue is showing appointments as completed or the video call interface has issues, 
+              this will clear all data and create fresh appointments with correct statuses.
+            </p>
+            <button
+              onClick={clearAndReinitializeData}
+              disabled={loading}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Database size={16} />
+              {loading ? 'Resetting Data...' : 'Clear & Reinitialize Data'}
+            </button>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-blue-800 mb-2">
+              📈 Initialize Sample Data
+            </h3>
+            <p className="text-sm text-blue-700 mb-3">
+              Add sample patients and appointments to test the system. Only use this if you don't have existing data.
+            </p>
+            <button
+              onClick={initializeSampleData}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Users size={16} />
+              {loading ? 'Adding Data...' : 'Add Sample Data'}
+            </button>
           </div>
         </div>
       </div>
@@ -1957,137 +2053,89 @@ const DoctorDashboard: React.FC = () => {
         {/* Doctor Header */}
         <DoctorHeader />
         
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-8">
-            {loading && <div className="mb-6 rounded-lg bg-white border border-gray-200 p-4 text-sm text-gray-500">Loading data...</div>}
-            {error && <div className="mb-6 rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">{error}</div>}
-            {renderView()}
-          </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto p-8">
+          {loading && <div className="mb-6 rounded-lg bg-white border border-gray-200 p-4 text-sm text-gray-500">Loading data...</div>}
+          {error && <div className="mb-6 rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">{error}</div>}
+          
+          {renderView()}
         </div>
+      </div>
       </main>
 
-      {/* Full Call Interface */}
+      {/* WebRTC Video Call Interface */}
       {activeCall && (
         <div className="fixed inset-0 bg-gray-900 z-50 flex">
-          {/* Main Call Area */}
-          <div className="flex-1 flex flex-col">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {activeCall.patientName.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">{activeCall.patientName}</h2>
-                    <p className="text-sm text-gray-500">
-                      {activeCall.appointmentId ? 'Queue Patient Call' : 'Manual Call'} • {activeCall.patientPhone}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-mono">{callTimer}</span>
-                </div>
-              </div>
-              
-              <button
-                onClick={async () => {
-                  const confirmed = window.confirm('End call and close interface?');
-                  if (confirmed) {
-                    // If this was a scheduled appointment call, mark it as completed
-                    if (activeCall.appointmentId) {
-                      try {
-                        await updateAppointmentInFirebase(activeCall.appointmentId, { status: 'completed' });
-                        console.log('✅ Appointment marked as completed');
-                      } catch (error) {
-                        console.error('❌ Error updating appointment status:', error);
+          {/* WebRTC Video Call Component */}
+          <div className="flex-1">
+            <WebRTCVideoCall
+              patientId={activeCall.patientId}
+              patientName={activeCall.patientName}
+              appointmentId={activeCall.appointmentId}
+              onCallEnd={async () => {
+                // If this was a scheduled appointment call, mark it as completed
+                if (activeCall.appointmentId) {
+                  try {
+                    await updateAppointmentInFirebase(activeCall.appointmentId, { status: 'completed' });
+                    console.log('✅ Appointment marked as completed');
+                  } catch (error) {
+                    console.error('❌ Error updating appointment status:', error);
+                  }
+                }
+                
+                // End the call
+                setActiveCall(null);
+                setCallTimer('00:00');
+                
+                // Show success message and offer to call next patient
+                setTimeout(() => {
+                  const hasNextPatient = queueAppointments.some((appt: Appointment) => appt.status === 'scheduled');
+                  if (hasNextPatient) {
+                    const callNext = window.confirm(
+                      `✅ Video consultation completed successfully!\n\nWould you like to call the next patient in queue?`
+                    );
+                    if (callNext) {
+                      // Find next scheduled appointment and start call
+                      const nextPatient = queueAppointments
+                        .filter((appt: Appointment) => appt.status === 'scheduled')
+                        .sort((a: Appointment, b: Appointment) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime())[0];
+                      
+                      if (nextPatient) {
+                        const patientData = patientMap[nextPatient.patientId];
+                        if (patientData) {
+                          const patientName = `${patientData.firstName} ${patientData.lastName}`;
+                          // Update appointment to in-queue status
+                          updateAppointmentInFirebase(nextPatient.id, { status: 'in-queue' });
+                          
+                          setActiveCall({
+                            patientId: patientData.id,
+                            patientName,
+                            patientPhone: patientData.phone || '',
+                            appointmentId: nextPatient.id,
+                            startTime: new Date()
+                          });
+                        }
                       }
                     }
-                    
-                    // End the call
-                    setActiveCall(null);
-                    setCallTimer('00:00');
+                  } else {
+                    alert('✅ Video consultation completed! No more patients in queue.');
                   }
-                }}
-                className="text-gray-400 hover:text-gray-600 p-2"
-                title="End call and close interface"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Video/Voice Call Area */}
-            <div className="flex-1 bg-gray-900 relative overflow-hidden">
-              {/* Video Call Simulation */}
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-32 h-32 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-4xl mb-4 mx-auto">
-                    {activeCall.patientName.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <h3 className="text-2xl font-semibold text-white mb-2">{activeCall.patientName}</h3>
-                  <p className="text-gray-300">Connected • {callTimer}</p>
-                </div>
-              </div>
-
-              {/* Doctor's Video (Small Window) */}
-              <div className="absolute top-4 right-4 w-48 h-36 bg-gray-700 rounded-lg border-2 border-gray-600 overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-orange-600 to-orange-700 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xl mb-2">
-                      DR
-                    </div>
-                    <p className="text-white text-sm">Dr. Smith</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Call Controls */}
-              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-6 py-4 flex items-center space-x-4">
-                  <button className="w-12 h-12 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center transition-colors">
-                    <span className="text-white text-xl">🎥</span>
-                  </button>
-                  <button 
-                    className="w-12 h-12 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center transition-colors"
-                    title="Toggle mute"
-                  >
-                    <span className="text-white text-xl">🔇</span>
-                  </button>
-                  <button 
-                    className="w-12 h-12 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center transition-colors"
-                    title="Open chat"
-                  >
-                    <span className="text-white text-xl">💬</span>
-                  </button>
-                  <button 
-                    onClick={async () => {
-                      const confirmed = window.confirm('End call with ' + activeCall.patientName + '?');
-                      if (confirmed) {
-                        // If this was a scheduled appointment call, mark it as completed
-                        if (activeCall.appointmentId) {
-                          try {
-                            await updateAppointmentInFirebase(activeCall.appointmentId, { status: 'completed' });
-                            console.log('✅ Appointment marked as completed');
-                          } catch (error) {
-                            console.error('❌ Error updating appointment status:', error);
-                          }
-                        }
-                        
-                        // End the call
-                        setActiveCall(null);
-                        setCallTimer('00:00');
-                      }
-                    }}
-                    className="w-12 h-12 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                    title="End call"
-                  >
-                    <Phone size={20} className="text-white rotate-135" />
-                  </button>
-                </div>
-              </div>
-            </div>
+                }, 500);
+              }}
+              onCallStateChange={(state) => {
+                console.log('📞 Call state changed:', state);
+                // Update call timer based on state - don't end call automatically
+                if (state === 'connected') {
+                  console.log('🎉 Call successfully connected');
+                } else if (state === 'failed') {
+                  console.log('⚠️ Call failed, but keeping interface open for demo');
+                } else if (state === 'ended' || state === 'call-ended') {
+                  console.log('📴 Call explicitly ended');
+                  setCallTimer('00:00');
+                }
+              }}
+            />
           </div>
 
           {/* Right Sidebar - EHR & Chat */}
@@ -2123,7 +2171,7 @@ const DoctorDashboard: React.FC = () => {
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  Notes
+                  Create EHR
                 </button>
               </nav>
             </div>
@@ -2214,6 +2262,19 @@ const DoctorDashboard: React.FC = () => {
                           <div className="text-gray-900">150 lbs</div>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Patient EHR History */}
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2">Electronic Health Records</h3>
+                      <p className="text-sm text-gray-600 mb-3">View this patient's complete medical history and previous consultations.</p>
+                      <button 
+                        onClick={() => setShowEHRHistory(true)}
+                        className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center"
+                      >
+                        <FileText size={16} className="mr-2" />
+                        View EHR History
+                      </button>
                     </div>
 
                     {/* Follow-up Scheduling */}
@@ -2329,30 +2390,84 @@ const DoctorDashboard: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === 'notes' && (
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-4">Consultation Notes</h3>
-                  <textarea
-                    className="w-full h-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
-                    placeholder="Add your consultation notes here..."
-                  />
-                  <div className="mt-4 flex justify-end space-x-2">
-                    <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      Clear
-                    </button>
-                    <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                      Save Notes
-                    </button>
+              {activeTab === 'notes' && (() => {
+                const patient = patients.find(p => p.id === activeCall.patientId);
+                const consultationId = activeCall.appointmentId;
+                
+                if (!patient) {
+                  return (
+                    <div className="p-4 text-center text-gray-500">
+                      <p>Patient information not available.</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="h-full overflow-hidden">
+                    <EHRForm
+                      patientInfo={{
+                        id: patient.id,
+                        firstName: patient.firstName,
+                        lastName: patient.lastName,
+                        age: patient.age,
+                        gender: patient.gender,
+                        phone: patient.phone,
+                        email: patient.email
+                      }}
+                      doctorInfo={{
+                        uid: currentDoctor?.uid || 'unknown',
+                        displayName: currentDoctor?.displayName || 'Unknown Doctor',
+                        specialization: currentDoctor?.specialization,
+                        licenseNumber: currentDoctor?.licenseNumber
+                      }}
+                      consultationId={consultationId}
+                      onSave={async (ehrId) => {
+                        console.log('EHR saved successfully:', ehrId);
+                        
+                        // Update appointment status to completed after EHR is saved
+                        if (activeCall?.appointmentId) {
+                          try {
+                            await updateAppointmentInFirebase(activeCall.appointmentId, { status: 'completed' });
+                            console.log('✅ Appointment marked as completed after EHR creation');
+                          } catch (error) {
+                            console.error('❌ Error updating appointment status:', error);
+                          }
+                        }
+                        
+                        alert('Electronic Health Record saved successfully! Appointment marked as completed.');
+                        // Switch back to EHR tab to show saved record
+                        setActiveTab('ehr');
+                      }}
+                      onCancel={() => {
+                        // Switch back to EHR tab or chat
+                        setActiveTab('ehr');
+                      }}
+                    />
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>
       )}
 
-      {/* WebRTC Call Manager Component */}
-      <WebRTCCallManager patients={patients} />
+      {/* EHR History Modal */}
+      {showEHRHistory && activeCall && (() => {
+        const patient = patients.find(p => p.id === activeCall.patientId);
+        if (!patient) return null;
+        
+        return (
+          <EHRViewer
+            patientId={patient.id}
+            patientName={`${patient.firstName} ${patient.lastName}`}
+            onClose={() => setShowEHRHistory(false)}
+            isModal={true}
+          />
+        );
+      })()}
+
+      {/* WebRTC Call Manager Component - Disabled to prevent interference */}
+      {/* <WebRTCCallManager patients={patients} /> */}
     </div>
   );
 };

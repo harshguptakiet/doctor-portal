@@ -17,13 +17,14 @@ import PharmacySignup from './pages/pharmacy/PharmacySignup';
 import PathologySignup from './pages/pathology/PathologySignup';
 import PathologyDashboard from './components/pathology/PathologyDashboard';
 import LandingPageProfessional from './pages/LandingPageProfessional';
+import MockPatient from './components/MockPatient';
 
 // Simple loading screen component
 const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
     <div className="text-center">
       <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-2">Medibot Portal</h2>
+      <h2 className="text-2xl font-semibold text-gray-800 mb-2">GarudX Portal</h2>
       <p className="text-gray-600">Loading secure portal...</p>
     </div>
   </div>
@@ -84,6 +85,7 @@ const WorkingAppRouter: React.FC = () => {
 
         {/* Patient Routes */}
         <Route path="/patient/app-download" element={<PatientAppDownload />} />
+        <Route path="/mock-patient" element={<MockPatient patientName="Test Patient" callId="test-call-123" />} />
 
         {/* Pharmacy Routes */}
         <Route path="/pharmacy/dashboard" element={<PharmacyDashboard />} />
