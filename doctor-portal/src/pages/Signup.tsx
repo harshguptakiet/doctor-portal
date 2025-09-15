@@ -16,7 +16,7 @@ type UserRole = 'doctor' | 'patient' | 'pharmacy' | 'pathology';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [, setSelectedRole] = useState<UserRole | null>(null);
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);

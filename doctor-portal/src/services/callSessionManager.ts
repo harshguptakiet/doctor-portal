@@ -234,7 +234,7 @@ class CallSessionManager {
   }
 
   // Get statistics
-  async getCallStatistics(doctorId: string): Promise<{
+  async getCallStatistics(_doctorId: string): Promise<{
     totalCalls: number;
     completedCalls: number;
     averageDuration: number;

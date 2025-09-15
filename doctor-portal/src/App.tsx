@@ -116,7 +116,6 @@ type ViewKey = 'dashboard' | 'queue' | 'patients' | 'settings';
 interface NavItem { key: ViewKey; label: string; icon: React.ReactNode }
 const cx = (...c: (string | null | undefined | false)[]) => c.filter(Boolean).join(' ');
 const isToday = (iso: string) => { const d=new Date(iso); const t=new Date(); return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear(); };
-const fmtDate = (iso?: string) => { if(!iso) return '—'; const d=new Date(iso); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); };
 
 const App: React.FC = () => {
   // Temporarily remove Firebase to debug white page - use mock data
@@ -124,12 +123,6 @@ const App: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
-  // Generate appointments throughout the day (24-hour schedule)
-  const generateTimeSlot = (hour: number, minute: number = 0) => {
-    const today = new Date();
-    today.setHours(hour, minute, 0, 0);
-    return today.toISOString();
-  };
 
   const [queueAppointments, setQueueAppointments] = useState<Appointment[]>([]);
   
@@ -286,7 +279,7 @@ const App: React.FC = () => {
       
       // Test Firebase connection first
       console.log('🧪 Testing Firebase connection...');
-      const testCollection = collection(db, 'test');
+      collection(db, 'test');
       console.log('✅ Firebase connection test passed');
       
       console.log('👥 Preparing sample patients data...');
@@ -415,7 +408,6 @@ const App: React.FC = () => {
         'Health screening'
       ];
 
-      const appointmentStatuses: ('scheduled' | 'completed' | 'in-queue')[] = ['scheduled', 'completed', 'in-queue'];
 
       // Create appointments for today and next few days
       const sampleAppointments = [];
@@ -480,7 +472,7 @@ const App: React.FC = () => {
       
       setLoading(false);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error initializing sample data:', error);
       console.error('📋 Error details:', {
         name: error.name,
@@ -534,7 +526,7 @@ const App: React.FC = () => {
       console.log('🎉 Firebase connection test completed successfully!');
       alert('✅ Firebase connection test successful! Check the console for details.');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Firebase connection test failed:', error);
       setError(`Connection test failed: ${error.message}`);
     } finally {
@@ -542,43 +534,6 @@ const App: React.FC = () => {
     }
   };
 
-  const addPatientToFirebase = async (patient: Omit<Patient, 'id'>) => {
-    const { db } = ensureFirebase();
-    try {
-      await addDoc(collection(db, 'patients'), {
-        ...patient,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error adding patient:', error);
-      setError('Failed to add patient');
-    }
-  };
-
-  const updatePatientInFirebase = async (patientId: string, updates: Partial<Patient>) => {
-    const { db } = ensureFirebase();
-    try {
-      await updateDoc(doc(db, 'patients', patientId), updates);
-    } catch (error) {
-      console.error('Error updating patient:', error);
-      setError('Failed to update patient');
-    }
-  };
-
-  const addAppointmentToFirebase = async (appointment: Omit<Appointment, 'id'>) => {
-    const { db } = ensureFirebase();
-    try {
-      await addDoc(collection(db, 'appointments'), {
-        ...appointment,
-        scheduledFor: Timestamp.fromDate(new Date(appointment.scheduledFor)),
-        followUpTime: appointment.followUpTime ? Timestamp.fromDate(new Date(appointment.followUpTime)) : null,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error adding appointment:', error);
-      setError('Failed to add appointment');
-    }
-  };
 
   const updateAppointmentInFirebase = async (appointmentId: string, updates: Partial<Appointment>) => {
     const { db } = ensureFirebase();

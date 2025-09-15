@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, PhoneOff, Video, Users, Clock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import VideoCall from './VideoCall';
 import webRTCService from '../services/webrtc';
 import type { CallSession, CallParticipant } from '../services/webrtc';
@@ -18,7 +18,6 @@ interface CallState {
 }
 
 const WebRTCCallManager: React.FC<WebRTCCallManagerProps> = ({
-  patients,
   onCallEnd
 }) => {
   const [callState, setCallState] = useState<CallState>({
@@ -28,15 +27,12 @@ const WebRTCCallManager: React.FC<WebRTCCallManagerProps> = ({
     remoteParticipant: null
   });
   
-  const [callStatus, setCallStatus] = useState<CallSession['status']>('ended');
   const [error, setError] = useState<string | null>(null);
 
   // Setup WebRTC service event listeners
   useEffect(() => {
     // Listen for incoming calls
     webRTCService.onCallStatusChange((status) => {
-      setCallStatus(status);
-      
       if (status === 'ended') {
         handleCallEnd();
       }
@@ -122,7 +118,6 @@ const WebRTCCallManager: React.FC<WebRTCCallManagerProps> = ({
       localParticipant: null,
       remoteParticipant: null
     });
-    setCallStatus('ended');
     setError(null);
   };
 
@@ -240,7 +235,7 @@ const WebRTCCallManager: React.FC<WebRTCCallManagerProps> = ({
 // Hook to use WebRTC calling functionality
 export const useWebRTCCall = () => {
   const [isInCall, setIsInCall] = useState(false);
-  const [callStatus, setCallStatus] = useState<CallSession['status']>('ended');
+  const [callStatus] = useState<CallSession['status']>('ended');
 
   useEffect(() => {
     const updateCallStatus = () => {

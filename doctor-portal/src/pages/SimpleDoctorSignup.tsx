@@ -9,7 +9,6 @@ import {
   EyeOff,
   Phone,
   MapPin,
-  GraduationCap,
   AlertCircle,
   Loader2,
   CheckCircle,

@@ -4,7 +4,6 @@ import {
   Users,
   Activity,
   ListChecks,
-  UserCircle2,
   ClipboardList,
   Download,
   Edit3,
@@ -25,11 +24,8 @@ import {
   CreditCard,
   HelpCircle,
   Shield,
-  Mail,
-  MapPin,
   Stethoscope,
   Star,
-  Award,
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -46,7 +42,7 @@ import { Bar, Line } from 'react-chartjs-2';
 import PatientManager from './PatientManager';
 import type { Patient } from './PatientTable';
 import WebRTCCallManager from './WebRTCCallManager';
-import { logout, getCurrentUser, onAuthStateChange } from '../services/authService';
+import { logout, onAuthStateChange } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import type { Doctor } from '../types/auth';
 
@@ -132,7 +128,6 @@ type ViewKey = 'dashboard' | 'queue' | 'patients' | 'settings';
 interface NavItem { key: ViewKey; label: string; icon: React.ReactNode }
 const cx = (...c: (string | null | undefined | false)[]) => c.filter(Boolean).join(' ');
 const isToday = (iso: string) => { const d=new Date(iso); const t=new Date(); return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear(); };
-const fmtDate = (iso?: string) => { if(!iso) return '—'; const d=new Date(iso); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); };
 
 const DoctorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -151,12 +146,6 @@ const DoctorDashboard: React.FC = () => {
   ]);
   const [showNotifications, setShowNotifications] = useState(false);
   
-  // Generate appointments throughout the day (24-hour schedule)
-  const generateTimeSlot = (hour: number, minute: number = 0) => {
-    const today = new Date();
-    today.setHours(hour, minute, 0, 0);
-    return today.toISOString();
-  };
 
   const [queueAppointments, setQueueAppointments] = useState<Appointment[]>([]);
   
@@ -372,7 +361,7 @@ const DoctorDashboard: React.FC = () => {
       
       // Test Firebase connection first
       console.log('🧪 Testing Firebase connection...');
-      const testCollection = collection(db, 'test');
+      collection(db, 'test');
       console.log('✅ Firebase connection test passed');
       
       console.log('👥 Preparing sample patients data...');
@@ -501,7 +490,6 @@ const DoctorDashboard: React.FC = () => {
         'Health screening'
       ];
 
-      const appointmentStatuses: ('scheduled' | 'completed' | 'in-queue')[] = ['scheduled', 'completed', 'in-queue'];
 
       // Create appointments for today and next few days
       const sampleAppointments = [];
@@ -628,43 +616,6 @@ const DoctorDashboard: React.FC = () => {
     }
   };
 
-  const addPatientToFirebase = async (patient: Omit<Patient, 'id'>) => {
-    const { db } = ensureFirebase();
-    try {
-      await addDoc(collection(db, 'patients'), {
-        ...patient,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error adding patient:', error);
-      setError('Failed to add patient');
-    }
-  };
-
-  const updatePatientInFirebase = async (patientId: string, updates: Partial<Patient>) => {
-    const { db } = ensureFirebase();
-    try {
-      await updateDoc(doc(db, 'patients', patientId), updates);
-    } catch (error) {
-      console.error('Error updating patient:', error);
-      setError('Failed to update patient');
-    }
-  };
-
-  const addAppointmentToFirebase = async (appointment: Omit<Appointment, 'id'>) => {
-    const { db } = ensureFirebase();
-    try {
-      await addDoc(collection(db, 'appointments'), {
-        ...appointment,
-        scheduledFor: Timestamp.fromDate(new Date(appointment.scheduledFor)),
-        followUpTime: appointment.followUpTime ? Timestamp.fromDate(new Date(appointment.followUpTime)) : null,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error adding appointment:', error);
-      setError('Failed to add appointment');
-    }
-  };
 
   const updateAppointmentInFirebase = async (appointmentId: string, updates: Partial<Appointment>) => {
     const { db } = ensureFirebase();
@@ -2401,7 +2352,7 @@ const DoctorDashboard: React.FC = () => {
       )}
 
       {/* WebRTC Call Manager Component */}
-      <WebRTCCallManager />
+      <WebRTCCallManager patients={patients} />
     </div>
   );
 };

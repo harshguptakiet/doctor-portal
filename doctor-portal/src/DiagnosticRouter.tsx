@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
 // We'll import pages one by one to test them
@@ -10,7 +10,6 @@ import PatientAppDownload from './pages/PatientAppDownload';
 // import VerificationPending from './pages/VerificationPending';
 
 const DiagnosticRouter: React.FC = () => {
-  const [testResults, setTestResults] = useState<{[key: string]: string}>({});
 
   const TestPage: React.FC<{name: string, component: React.ComponentType}> = ({ name, component: Component }) => {
     try {

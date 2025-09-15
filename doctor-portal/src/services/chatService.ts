@@ -14,7 +14,6 @@ import {
   ref, 
   uploadBytes, 
   getDownloadURL, 
-  deleteObject 
 } from 'firebase/storage';
 import { db, storage, auth } from '../config/firebase';
 import { signInAnonymously } from 'firebase/auth';
@@ -27,7 +26,7 @@ export interface ChatMessage {
   senderRole: 'doctor' | 'patient';
   message?: string;
   type: 'text' | 'file' | 'voice' | 'image' | 'system';
-  timestamp: Timestamp | Date;
+  timestamp: Timestamp | Date | any;
   
   // File/attachment specific fields
   fileUrl?: string;
@@ -48,8 +47,8 @@ export interface ChatMessage {
   // Edit/Delete fields
   isEdited?: boolean;
   isDeleted?: boolean;
-  editedAt?: Timestamp | Date;
-  deletedAt?: Timestamp | Date;
+  editedAt?: Timestamp | Date | any;
+  deletedAt?: Timestamp | Date | any;
 }
 
 export interface ChatParticipant {
@@ -58,7 +57,7 @@ export interface ChatParticipant {
   role: 'doctor' | 'patient';
   avatar?: string;
   isOnline: boolean;
-  lastSeen: Timestamp | Date;
+  lastSeen: Timestamp | Date | any;
 }
 
 export interface VoiceRecordingConfig {
@@ -426,7 +425,7 @@ class ChatService {
   /**
    * Delete a message
    */
-  async deleteMessage(messageId: string, userId: string): Promise<void> {
+  async deleteMessage(messageId: string, _userId: string): Promise<void> {
     try {
       const messageRef = doc(db, 'chat_messages', messageId);
       await updateDoc(messageRef, {
@@ -445,7 +444,7 @@ class ChatService {
   /**
    * Edit a text message
    */
-  async editMessage(messageId: string, newMessage: string, userId: string): Promise<void> {
+  async editMessage(messageId: string, newMessage: string, _userId: string): Promise<void> {
     try {
       const messageRef = doc(db, 'chat_messages', messageId);
       await updateDoc(messageRef, {

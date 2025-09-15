@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import GarudXLogo from '../components/GarudXLogo';
 
@@ -369,31 +369,6 @@ const FloatingElement: React.FC<{ children: React.ReactNode; delay?: number; dur
   </div>
 );
 
-// Advanced animated counter hook
-const useAnimatedCounter = (end: number, duration = 2000, start = 0) => {
-  const [count, setCount] = useState(start);
-  const [hasStarted, setHasStarted] = useState(false);
-
-  const startAnimation = useCallback(() => {
-    if (hasStarted) return;
-    setHasStarted(true);
-    
-    const increment = (end - start) / (duration / 16);
-    let current = start;
-    
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= end) {
-        setCount(end);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(current));
-      }
-    }, 16);
-  }, [end, start, duration, hasStarted]);
-
-  return { count, startAnimation };
-};
 
 const LandingPageAdvanced: React.FC = () => {
   const [currentLanguage, setCurrentLanguage] = useState<Language>('hi');

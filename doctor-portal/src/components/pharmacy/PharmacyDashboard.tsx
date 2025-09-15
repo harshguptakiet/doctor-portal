@@ -6,8 +6,6 @@ import {
   Users,
   TrendingUp,
   AlertTriangle,
-  Clock,
-  Calendar,
   Search,
   Bell,
   ChevronDown,
@@ -17,20 +15,11 @@ import {
   Pill,
   DollarSign,
   Activity,
-  RefreshCcw,
   Plus,
-  Filter,
   Download,
-  Eye,
-  Edit3,
-  Truck,
   Shield,
-  Star,
   CreditCard,
-  HelpCircle,
-  Mail,
-  Phone,
-  MapPin
+  HelpCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { logout, onAuthStateChange } from '../../services/authService';

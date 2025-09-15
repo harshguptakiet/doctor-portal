@@ -33,7 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const checkAuth = async () => {
       try {
         const currentUser = await getCurrentUser();
-        setUser(currentUser.user);
+        setUser(currentUser.user as any);
         setUserRole(currentUser.role);
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -103,7 +103,7 @@ const AppRouter: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const currentUser = await getCurrentUser();
-        setUser(currentUser.user);
+        setUser(currentUser.user as any);
         setUserRole(currentUser.role);
       } catch (error) {
         console.error('Initial auth check failed:', error);

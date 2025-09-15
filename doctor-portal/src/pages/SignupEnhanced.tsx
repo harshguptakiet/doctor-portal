@@ -36,7 +36,7 @@ const FloatingElement: React.FC<{ children: React.ReactNode; delay?: number; dur
 
 const SignupEnhanced: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [, setSelectedRole] = useState<UserRole | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {

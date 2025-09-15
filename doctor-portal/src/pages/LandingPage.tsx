@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Heart,
@@ -21,7 +21,8 @@ import {
   TrendingUp,
   HelpCircle
 } from 'lucide-react';
-import { useTranslation, Language } from '../utils/translations';
+import { useTranslation } from '../utils/translations';
+import type { Language } from '../utils/translations';
 
 // Language Toggle Component
 const LanguageToggle: React.FC<{ currentLanguage: Language; onLanguageChange: (lang: Language) => void }> = (
@@ -71,67 +72,10 @@ const LanguageToggle: React.FC<{ currentLanguage: Language; onLanguageChange: (l
   );
 };
 
-// Floating Animation Component
-const FloatingElement: React.FC<{ children: React.ReactNode; delay?: number; duration?: number }> = ({
-  children,
-  delay = 0,
-  duration = 6
-}) => {
-  return (
-    <div 
-      className="animate-float"
-      style={{
-        animationDelay: `${delay}s`,
-        animationDuration: `${duration}s`
-      }}
-    >
-      {children}
-    </div>
-  );
-};
 
-// Typing Animation Component
-const TypingAnimation: React.FC<{ texts: string[]; speed?: number }> = ({ texts, speed = 100 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentText, setCurrentText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  useEffect(() => {
-    const text = texts[currentIndex];
-    
-    const timeout = setTimeout(() => {
-      if (!isDeleting) {
-        setCurrentText(text.substring(0, currentText.length + 1));
-        if (currentText === text) {
-          setTimeout(() => setIsDeleting(true), 2000);
-        }
-      } else {
-        setCurrentText(text.substring(0, currentText.length - 1));
-        if (currentText === '') {
-          setIsDeleting(false);
-          setCurrentIndex((prevIndex) => (prevIndex + 1) % texts.length);
-        }
-      }
-    }, isDeleting ? speed / 2 : speed);
-    
-    return () => clearTimeout(timeout);
-  }, [currentText, isDeleting, currentIndex, texts, speed]);
-  
-  return (
-    <span className="text-green-600">
-      {currentText}
-      <span className="animate-pulse">|</span>
-    </span>
-  );
-};
 
 const LandingPage: React.FC = () => {
   const { t, currentLanguage, changeLanguage } = useTranslation();
-  const [isVisible, setIsVisible] = useState(false);
-  
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
   
   console.log('LandingPage loaded, current language:', currentLanguage);
   console.log('Translation object:', t);

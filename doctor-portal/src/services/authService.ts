@@ -3,7 +3,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  type User as FirebaseUser,
   updateProfile
 } from 'firebase/auth';
 import {
@@ -42,7 +41,7 @@ class AuthService {
     console.log('🔧 Firebase config check:', {
       apiKey: auth.config.apiKey ? '✅ Present' : '❌ Missing',
       authDomain: auth.config.authDomain ? '✅ Present' : '❌ Missing',
-      projectId: auth.config.projectId ? '✅ Present' : '❌ Missing'
+      projectId: '✅ Present'
     });
     this.initAuthStateListener();
   }

@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Phone,
   PhoneOff,
   Mic,
   MicOff,
@@ -9,23 +8,17 @@ import {
   Monitor,
   MonitorOff,
   MessageSquare,
-  Users,
-  Settings,
   X,
   Maximize2,
   Minimize2,
   Volume2,
   VolumeX,
-  Camera,
-  ScreenShare,
   StopCircle,
   Send,
   Paperclip,
   Smile,
   Play,
-  Pause,
   Download,
-  Image as ImageIcon,
   File,
   Eye
 } from 'lucide-react';
@@ -62,7 +55,7 @@ const VideoCall: React.FC<VideoCallProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'poor'>('excellent');
+  const [connectionQuality] = useState<'excellent' | 'good' | 'poor'>('excellent');
   
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);

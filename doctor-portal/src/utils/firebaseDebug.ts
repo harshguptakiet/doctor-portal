@@ -8,7 +8,7 @@ export const testFirebaseAuth = async () => {
   console.log('📋 Firebase Config:', {
     apiKey: auth.config.apiKey ? `${auth.config.apiKey.substring(0, 10)}...` : '❌ Missing',
     authDomain: auth.config.authDomain || '❌ Missing',
-    projectId: auth.config.projectId || '❌ Missing'
+    projectId: 'medibot-b2bf7'
   });
 
   // Test basic auth connectivity

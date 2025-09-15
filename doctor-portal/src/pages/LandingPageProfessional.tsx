@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import GarudXLogo from '../components/GarudXLogo';
 
@@ -765,7 +765,7 @@ const LandingPageProfessional: React.FC = () => {
                 
                 {isLangOpen && (
                   <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[160px] animate-fadeInUp">
-                    {languages.map((lang, index) => (
+                    {languages.map((lang) => (
                       <button
                         key={lang.code}
                         onClick={() => {

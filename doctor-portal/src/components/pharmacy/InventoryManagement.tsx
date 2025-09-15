@@ -3,17 +3,13 @@ import {
   Package,
   Plus,
   Search,
-  Filter,
   Download,
   Upload,
   Edit3,
   Trash2,
   AlertTriangle,
-  Calendar,
   MapPin,
   Eye,
-  ExternalLink,
-  RefreshCw,
   FileText,
   TrendingDown,
   TrendingUp,
@@ -49,7 +45,6 @@ const InventoryManagement: React.FC = () => {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
 
   // Load demo data on mount
@@ -246,7 +241,7 @@ const InventoryManagement: React.FC = () => {
           </button>
           
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => console.log('Add medicine modal coming soon')}
             className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
           >
             <Plus className="h-4 w-4" />

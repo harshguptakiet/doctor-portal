@@ -22,8 +22,6 @@ import {
   Home,
   Zap,
   Send,
-  X,
-  Plus
 } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';

@@ -13,15 +13,11 @@ import {
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
-  TrendingUp,
   DollarSign,
   Package,
-  Users,
-  Calendar,
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
-  Filter,
   Download
 } from 'lucide-react';
 
